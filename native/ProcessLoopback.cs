@@ -105,7 +105,7 @@ namespace SpwIsland.Audio
                             finally { capture.ReleaseBuffer(frames); }
                             capture.GetNextPacketSize(out packet);
                         }
-                        if (silence.ElapsedMilliseconds >= 150) { output.WriteLine("0,0,0,0"); silence.Restart(); }
+                        if (silence.ElapsedMilliseconds >= 150) { spectrum.Reset(); output.WriteLine("0,0,0,0"); silence.Restart(); }
                     }
                 }
                 finally { client.Stop(); Marshal.ReleaseComObject(service); }

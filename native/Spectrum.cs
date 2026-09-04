@@ -9,6 +9,7 @@ namespace SpwIsland.Audio
     {
         private const int Size = 2048;
         private readonly double[] left = new double[Size], right = new double[Size];
+        private readonly SpectrumLevels levels = new SpectrumLevels();
         private int used;
         internal string Push(short l, short r)
         {
@@ -17,19 +18,23 @@ namespace SpwIsland.Audio
             used = 0;
             double[] a = Power(left), b = Power(right);
             int[] edges = { 40, 250, 1000, 4000, 16000 };
-            string[] result = new string[4];
+            double[] rms = new double[4];
             for (int band = 0; band < 4; band++)
             {
                 double power = 0;
                 int start = Math.Max(1, (int)Math.Ceiling(edges[band] * Size / 44100.0));
                 int end = Math.Min(Size / 2, (int)Math.Ceiling(edges[band + 1] * Size / 44100.0));
                 for (int i = start; i < end; i++) power += (a[i] + b[i]) * .5;
-                double amplitude = Math.Sqrt(power) * 4 / Size;
-                double level = amplitude < .0005 ? 0 : Math.Max(0, Math.Min(1, (20 * Math.Log10(amplitude) + 66) / 60));
-                result[band] = level.ToString("F4", CultureInfo.InvariantCulture);
+                // Parseval normalization: account for the negative-frequency half and
+                // the Hann window's squared gain, yielding actual per-band RMS.
+                double windowPower = 3.0 * (Size - 1) / 8;
+                rms[band] = Math.Sqrt(2 * power / (Size * windowPower));
             }
+            double[] mapped = levels.Map(rms);
+            string[] result = Array.ConvertAll(mapped, value => value.ToString("F4", CultureInfo.InvariantCulture));
             return String.Join(",", result);
         }
+        internal void Reset() { used = 0; levels.Reset(); }
         private static double[] Power(double[] samples)
         {
             double[] re = new double[Size], im = new double[Size];

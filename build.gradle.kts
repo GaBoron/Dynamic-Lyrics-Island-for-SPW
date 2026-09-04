@@ -60,8 +60,23 @@ tasks.register<Exec>("buildSpectrum") {
     executable = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
     args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
         file("native/AudioInterop.cs").absolutePath, file("native/Spectrum.cs").absolutePath,
-        file("native/ProcessLoopback.cs").absolutePath)
+        file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
 }
+
+tasks.register<Exec>("compileSpectrumTests") {
+    val output = layout.buildDirectory.file("native/spectrum-tests.exe")
+    val sources = listOf("native/Spectrum.cs", "native/SpectrumLevels.cs", "src/test/csharp/SpectrumTests.cs").map(::file)
+    inputs.files(sources); outputs.file(output)
+    doFirst { output.get().asFile.parentFile.mkdirs() }
+    executable = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    args("/nologo", "/target:exe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}")
+    args(sources.map { it.absolutePath })
+}
+tasks.register<Exec>("testSpectrum") {
+    dependsOn("compileSpectrumTests")
+    executable = layout.buildDirectory.file("native/spectrum-tests.exe").get().asFile.absolutePath
+}
+tasks.test { dependsOn("testSpectrum") }
 tasks.register<Zip>("plugin") {
     dependsOn(tasks.jar, "sourceArchive")
     archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}.zip")
