@@ -62,9 +62,13 @@ fun main() {
             check(Window.getWindows().none { w -> w.isDisplayable && w.name == "Dynamic Lyrics Island for SPW" })
         }
         check(config.listeners.isEmpty())
+        check(ProcessHandle.current().descendants().noneMatch { child ->
+            child.info().command().orElse("").endsWith("spw-spectrum.exe", ignoreCase = true)
+        }) { "Audio helper survived plugin stop" }
+        check(Thread.getAllStackTraces().keys.none { thread -> thread.isAlive && thread.name == "SPW Island settings sync" })
         check(IslandPlugin.active() == null)
         if (SystemTray.isSupported()) check(SystemTray.getSystemTray().trayIcons.size == trayCount)
     }
     check(errors.isEmpty()) { errors.joinToString() }
-    println("PASS: two host lifecycle cycles, callback routing, native click-through on/off, hidden window and tray disposal, listener removal")
+    println("PASS: two host lifecycle cycles, callback routing, native click-through, window/tray disposal, config sync and audio helper shutdown")
 }

@@ -33,3 +33,20 @@ Wrapper configuration changed to Gradle 9.2.1 with distribution SHA-256 checking
 
 See THIRD_PARTY_NOTICES.md and licenses/ for dependency licenses.
 Keep this attribution and all applicable license notices when redistributing.
+
+Apple Music-like Lyrics (AMLL)
+Copyright its respective AMLL contributors (including Steve-xmh).
+https://github.com/amll-dev/applemusic-like-lyrics
+Source revision: 58ccd3ffae7ec4e9a6d1cdb0dd88ac8c767f68a8
+Original: packages/core/src/lyric-player/dom/lyric-line.ts
+License: GNU Affero General Public License, version 3 (licenses/AGPL-3.0.txt).
+Modified 2026-09-04 by GaBoron: ported float and per-character emphasis curves,
+duration scaling and terminal-word emphasis to Kotlin AmllMotion.kt. Java2D
+glyph rendering, gradient highlighting and the damped line spring integrate the
+port into a single-line SPW island; no AMLL DOM, WebGL or spring library is bundled.
+AmllMotion.kt remains AGPL-3.0-only. Other original program files retain their
+GPL-3.0-only notices. The combined program is conveyed under the linking and
+combination permissions in section 13 of GPLv3 and AGPLv3; both licenses and
+the complete corresponding source accompany every plugin distribution.
+This does not change the original Lyricify CC BY-SA 4.0 attribution or license.
+No warranty is provided, to the extent permitted by applicable law.

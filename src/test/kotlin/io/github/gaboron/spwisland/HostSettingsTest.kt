@@ -11,9 +11,10 @@ import java.util.function.Consumer
 
 class HostSettingsTest {
     @Test fun acceptsHostSliderFloatsClampsAndUnsubscribes() {
-        val fake = MemoryConfig(); val settings = HostSettings(fake) {}
+        val fake = MemoryConfig()
         fake.values["font_size"] = 30.7; fake.values["max_width"] = 90000.0
         fake.values["opacity"] = Double.NaN; fake.values["offset_ms"] = -9000.0
+        val settings = HostSettings(fake) {}
         assertEquals(31, settings.read().fontSize); assertEquals(1200, settings.read().maxWidth)
         assertEquals(96, settings.read().opacity); assertEquals(-2000, settings.read().offsetMs)
         assertEquals(1, fake.listeners.size)

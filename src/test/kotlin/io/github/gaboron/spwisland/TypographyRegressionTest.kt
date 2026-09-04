@@ -57,11 +57,12 @@ class TypographyRegressionTest {
         val timeline = PlaybackTimeline { 0 }
         timeline.trackChanged(Track("SONG TITLE MUST NOT APPEAR", "Artist", "song"))
         timeline.stateChanged(PlaybackStatus.READY); timeline.playingChanged(true)
+        assertEquals("SONG TITLE MUST NOT APPEAR", IslandTextBlock(timeline.snapshot(), IslandSettings()).main)
         timeline.lineChanged(LyricLine(0, 1000, "Lyrics", null, emptyList()))
         timeline.positionChanged(1500)
-        assertEquals("···", IslandTextBlock(timeline.snapshot(), IslandSettings()).main)
+        assertEquals("Lyrics", IslandTextBlock(timeline.snapshot(), IslandSettings()).main)
         timeline.lineChanged(null)
-        assertEquals("···", IslandTextBlock(timeline.snapshot(), IslandSettings()).main)
+        assertEquals("Lyrics", IslandTextBlock(timeline.snapshot(), IslandSettings()).main)
     }
     @Test fun leftIconDoesNotInventAudioAmplitude() {
         SwingUtilities.invokeAndWait {

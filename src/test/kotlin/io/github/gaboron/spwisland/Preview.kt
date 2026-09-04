@@ -53,9 +53,9 @@ fun main() {
             override fun next() = select(1)
             override fun toggle() { timeline.playingChanged(!timeline.snapshot().playing) }
         }
-        window = IslandWindow(timeline, store, actions) { error ->
+        window = IslandWindow(timeline, store, actions, report = { error ->
             error.printStackTrace(); JOptionPane.showMessageDialog(null, error.message)
-        }
+        })
         select(0)
         val heartbeat = Timer(1000) {
             val position = timeline.snapshot().positionMs

@@ -11,7 +11,9 @@ import kotlin.math.roundToInt
 
 /** Owns only window lifecycle, placement and presentation animation. Must live on the EDT. */
 class IslandWindow(private val timeline: PlaybackTimeline, private val store: SettingsStore,
-                   actions: PlaybackActions, private val report: (Throwable) -> Unit) : AutoCloseable {
+                   actions: PlaybackActions, private val report: (Throwable) -> Unit,
+                   private val spectrum: () -> FloatArray = { FloatArray(4) },
+                   private val spectrumStatus: () -> String = { "无音频输入" }) : AutoCloseable {
     private val window = JWindow().apply {
         name = "Dynamic Lyrics Island for SPW"
         type = Window.Type.UTILITY; isAlwaysOnTop = true
@@ -29,6 +31,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var nextScreenCheck = 0L
     private var lastFrame = System.nanoTime()
     private var lastLine: LyricLine? = null
+    private var previousSnapshot: PlaybackSnapshot? = null
     private var width = 280.0
     private var height = 58.0
     private var anchor: Point? = null
@@ -81,6 +84,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         tick()
     }
     fun about() = menu.about()
+    fun showSettings() = menu.settings()
     private fun tick() {
         if (closed) return
         val now = System.nanoTime()
@@ -88,6 +92,8 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         lastFrame = now
         val snap = timeline.snapshot()
         panel.settings = settings; panel.snapshot = snap
+        panel.updateSpectrum(if (snap.playing) spectrum() else FloatArray(4), dt)
+        panel.toolTipText = spectrumStatus()
         val devices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
         val draggedScreen = anchor?.let { a -> devices.find { it.defaultConfiguration.bounds.contains(a) } }
         val device = draggedScreen ?: devices.find { it.iDstring == settings.screen } ?:
@@ -98,8 +104,12 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             settings.top?.takeIf { settings.screen == device.iDstring })
         val mouse = MouseInfo.getPointerInfo()?.location
         panel.expanded = !settings.clickThrough && (dragging || (window.isVisible && mouse != null && window.bounds.contains(mouse)))
-        if (snap.line != lastLine) { panel.transition = 0.0; lastLine = snap.line }
-        panel.transition = (panel.transition + dt / .24).coerceAtMost(1.0)
+        if (snap.line != lastLine || snap.track != previousSnapshot?.track) {
+            panel.outgoing = previousSnapshot?.takeIf { it.track == snap.track }
+            panel.transition = 0.0; lastLine = snap.line
+        }
+        previousSnapshot = snap
+        panel.transition = (panel.transition + dt / .65).coerceAtMost(1.0)
         val desired = panel.desiredSize(screen.width)
         val factor = if (settings.reducedMotion) 1.0 else 1 - kotlin.math.exp(-dt * 15)
         width += (desired.width - width) * factor

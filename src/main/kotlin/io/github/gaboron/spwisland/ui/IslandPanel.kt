@@ -14,6 +14,15 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     var snapshot = PlaybackSnapshot(null, null, 0, false, PlaybackStatus.IDLE)
     var expanded = false
     var transition = 1.0
+    var outgoing: PlaybackSnapshot? = null
+    private val bands = FloatArray(4)
+    fun updateSpectrum(levels: FloatArray, dt: Double) {
+        for (i in bands.indices) {
+            val target = levels.getOrElse(i) { 0f }.coerceIn(0f, 1f)
+            val speed = if (target > bands[i]) 28 else 9
+            bands[i] += (target - bands[i]) * (1 - kotlin.math.exp(-dt * speed)).toFloat()
+        }
+    }
     private val previous = control("上一首", "|◀") { actions.previous() }
     private val play = control("播放或暂停", "▶") { actions.toggle() }
     private val next = control("下一首", "▶|") { actions.next() }
@@ -50,19 +59,10 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             g.color = Color(255, 255, 255, 19); g.draw(shape)
             g.clip(shape)
             val block = IslandTextBlock(snapshot, settings)
-            val line = block.line
             val lyricAreaHeight = (height - if (expanded) IslandTextBlock.EXPANDED_HEIGHT else 0).toFloat()
             val animation = if (settings.reducedMotion) 1.0 else transition
             drawIndicator(g, 30, (lyricAreaHeight / 2).toInt())
-            g.composite = AlphaComposite.SrcOver.derive((.25 + .75 * animation).toFloat())
-            val time = snapshot.positionMs + settings.offsetMs
-            LyricPainter.draw(g, block.main, line?.timedWords.orEmpty(),
-                if (line?.timedWords?.isNotEmpty() == true) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
-                IslandTextBlock.INSET, block.mainBaseline(lyricAreaHeight), width - IslandTextBlock.INSET * 2, block.mainFont, settings.karaoke)
-            if (block.sub != null) LyricPainter.draw(g, block.sub, emptyList(), (time - (line?.startMs ?: 0)).coerceAtLeast(0),
-                IslandTextBlock.INSET, block.subBaseline(lyricAreaHeight), width - IslandTextBlock.INSET * 2,
-                block.subFont, false, Color(177, 182, 195))
-            g.composite = AlphaComposite.SrcOver
+            IslandLyricsPainter.draw(g, snapshot, outgoing, settings, width, lyricAreaHeight, animation)
             drawStatus(g, (lyricAreaHeight / 2).toInt())
             if (expanded) {
                 val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist).filter { it.isNotBlank() }.joinToString(" · ")
@@ -74,13 +74,10 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     }
     private fun drawIndicator(g: Graphics2D, x: Int, centerY: Int) {
         g.color = Color(132, 216, 188)
-        // A static musical note, not a spectrum: SPW exposes no PCM/amplitude data.
-        g.stroke = BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-        g.drawLine(x - 3, centerY + 5, x - 3, centerY - 8)
-        g.drawLine(x + 7, centerY + 2, x + 7, centerY - 11)
-        g.drawLine(x - 3, centerY - 8, x + 7, centerY - 11)
-        g.fillOval(x - 10, centerY + 2, 8, 6)
-        g.fillOval(x, centerY - 1, 8, 6)
+        for (i in bands.indices) {
+            val barHeight = 2 + (bands[i] * 24).toInt()
+            g.fillRoundRect(x - 11 + i * 6, centerY - barHeight / 2, 3, barHeight, 3, 3)
+        }
     }
     private fun drawStatus(g: Graphics2D, centerY: Int) {
         if (snapshot.line == null && snapshot.playing) {

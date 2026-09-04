@@ -18,7 +18,10 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             anchor = nanoTime()
         }
     }
-    @Synchronized fun lineChanged(value: LyricLine?) { line = value }
+    @Synchronized fun lineChanged(value: LyricLine?) {
+        // Null/blank callbacks mark instrumental gaps, not a request to erase the last lyric.
+        if (value != null && value.text.isNotBlank()) line = value
+    }
     @Synchronized fun positionChanged(value: Long) {
         position = value.coerceAtLeast(0)
         anchor = nanoTime()
@@ -45,11 +48,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
     }
     @Synchronized fun snapshot(): PlaybackSnapshot {
         val now = currentPosition()
-        val visibleLine = line?.takeIf {
-            // Some plain lyrics have no usable end time; the host then owns their lifetime.
-            it.endMs <= it.startMs || now < it.endMs
-        }
-        return PlaybackSnapshot(track, visibleLine, now, playing && status == PlaybackStatus.READY, status)
+        return PlaybackSnapshot(track, line, now, playing && status == PlaybackStatus.READY, status)
     }
     private fun currentPosition(): Long = position + if (playing && status == PlaybackStatus.READY) {
         // Freeze on a missing host heartbeat rather than letting stale lyrics run indefinitely.

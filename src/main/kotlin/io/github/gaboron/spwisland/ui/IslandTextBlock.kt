@@ -7,14 +7,9 @@ import java.awt.Font
 import kotlin.math.ceil
 
 /** One layout specification owns text selection, insets, measured width and vertical centering. */
-class IslandTextBlock(snapshot: PlaybackSnapshot, settings: IslandSettings) {
+class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSettings) {
     val line = snapshot.line
-    val main = line?.text?.takeIf { it.isNotBlank() } ?: when {
-        snapshot.status == PlaybackStatus.BUFFERING -> "正在缓冲"
-        snapshot.playing -> "···"
-        snapshot.track != null -> "已暂停"
-        else -> "等待播放"
-    }
+    val main = line?.text?.takeIf { it.isNotBlank() } ?: snapshot.track?.title?.takeIf { it.isNotBlank() } ?: "SPW"
     val mainFont = Font(settings.fontFamily, Font.PLAIN, settings.fontSize)
     val sub = line?.translation?.takeIf { settings.translation && it.isNotBlank() }
     val subFont = mainFont.deriveFont(settings.fontSize * .7f)
@@ -25,7 +20,8 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, settings: IslandSettings) {
     val preferredHeight = maxOf(settings.fontSize + 28, ceil(height + 28).toInt())
 
     fun size(maxWidth: Int, expanded: Boolean): Dimension {
-        val needed = ceil(maxOf(shapedMain.width, shapedSub?.width ?: 0f) + INSET * 2).toInt()
+        val motionPad = if (settings.karaoke && line?.timedWords?.isNotEmpty() == true) settings.fontSize * .32f else 0f
+        val needed = ceil(maxOf(shapedMain.width + motionPad, shapedSub?.width ?: 0f) + INSET * 2).toInt()
         val limit = maxWidth.coerceAtLeast(1)
         return Dimension(needed.coerceIn(minOf(if (expanded) 340 else 240, limit), limit),
             preferredHeight + if (expanded) EXPANDED_HEIGHT else 0)

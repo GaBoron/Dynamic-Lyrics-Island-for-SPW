@@ -23,6 +23,8 @@ dependencies {
 }
 tasks.test { useJUnit(); systemProperty("java.awt.headless", "true") }
 tasks.processResources {
+    dependsOn("buildSpectrum")
+    from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
     inputs.property("projectUrl", projectUrl)
     filesMatching("project.properties") { expand("projectUrl" to projectUrl.get()) }
 }
@@ -42,11 +44,23 @@ tasks.register<Zip>("sourceArchive") {
     archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-source.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     from("src") { into("src") }
+    from("native") { into("native") }
     from("gradle") { into("gradle") }
     from("licenses") { into("licenses") }
     from("docs") { into("docs") }
     from("build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
         "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", ".gitignore")
+}
+
+tasks.register<Exec>("buildSpectrum") {
+    val output = layout.buildDirectory.file("native/spw-spectrum.exe")
+    inputs.files(fileTree("native") { include("*.cs") })
+    outputs.file(output)
+    doFirst { output.get().asFile.parentFile.mkdirs() }
+    executable = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
+        file("native/AudioInterop.cs").absolutePath, file("native/Spectrum.cs").absolutePath,
+        file("native/ProcessLoopback.cs").absolutePath)
 }
 tasks.register<Zip>("plugin") {
     dependsOn(tasks.jar, "sourceArchive")

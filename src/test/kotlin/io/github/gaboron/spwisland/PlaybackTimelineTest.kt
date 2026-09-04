@@ -44,12 +44,14 @@ class PlaybackTimelineTest {
         assertEquals("New", timeline.snapshot().track?.title)
         timeline.stateChanged(PlaybackStatus.IDLE); assertNull(timeline.snapshot().track)
     }
-    @Test fun expiredLineBecomesInstrumentalAndNullClearsImmediately() {
+    @Test fun expiredLineAndNullCallbacksKeepPreviousUntilReplacement() {
         start(); timeline.lineChanged(LyricLine(0, 100, "short", null, emptyList()))
-        advance(100); assertNull(timeline.snapshot().line)
+        advance(100); assertEquals("short", timeline.snapshot().line?.text)
+        timeline.lineChanged(null); assertEquals("short", timeline.snapshot().line?.text)
+        timeline.lineChanged(LyricLine(100, 200, " ", null, emptyList()))
+        assertEquals("short", timeline.snapshot().line?.text)
         timeline.lineChanged(LyricLine(100, 100, "untimed", null, emptyList()))
-        assertNotNull(timeline.snapshot().line)
-        timeline.lineChanged(null); assertNull(timeline.snapshot().line)
+        assertEquals("untimed", timeline.snapshot().line?.text)
     }
     @Test fun staleHeartbeatDoesNotExtrapolateForever() {
         start(); timeline.positionChanged(1000); advance(60000)

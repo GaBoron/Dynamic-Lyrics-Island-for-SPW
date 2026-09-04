@@ -3,13 +3,12 @@ package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.*
 import java.awt.*
-import java.awt.geom.Area
 import java.awt.geom.Rectangle2D
 
 /** Shapes the whole line together, so combining marks and bidirectional scripts stay intact. */
 object LyricPainter {
     fun draw(g: Graphics2D, text: String, words: List<Word>, position: Long, x: Float, baseline: Float,
-             available: Float, font: Font, karaoke: Boolean, color: Color = Color.WHITE) {
+             available: Float, font: Font, karaoke: Boolean, color: Color = Color.WHITE, motion: Boolean = true) {
         if (text.isEmpty() || available <= 0) return
         val shaped = LyricTypography.shape(text, font)
         val layout = shaped.layout
@@ -30,30 +29,14 @@ object LyricPainter {
         val origin = (if (overflow == 0f) x + (available - shaped.width) / 2 else x - scroll) - shaped.left
         val copy = g.create() as Graphics2D
         try {
-            copy.clip(Rectangle2D.Float(x, baseline - layout.ascent - 3, available, layout.ascent + layout.descent + 6))
-            copy.color = if (karaoke && words.isNotEmpty()) Color(126, 129, 138) else color
-            layout.draw(copy, origin, baseline)
+            copy.clip(Rectangle2D.Float(x - font.size2D * .16f, baseline - layout.ascent - font.size2D * .3f,
+                available + font.size2D * .32f, layout.ascent + layout.descent + font.size2D * .6f))
             if (karaoke && words.isNotEmpty()) {
-                character = 0
-                for (word in words) {
-                    val end = (character + word.text.length).coerceAtMost(text.length)
-                    val progress = word.progress(position)
-                    if (end > character && progress > 0) {
-                        val area = Area(layout.getLogicalHighlightShape(character, end))
-                        val bounds = area.bounds2D
-                        val left = if (layout.isLeftToRight) bounds.x else bounds.maxX - bounds.width * progress
-                        area.intersect(Area(Rectangle2D.Double(left, bounds.y, bounds.width * progress, bounds.height)))
-                        val highlight = copy.create() as Graphics2D
-                        try {
-                            highlight.translate(origin.toDouble(), baseline.toDouble())
-                            highlight.clip(area)
-                            highlight.color = color
-                            layout.draw(highlight, 0f, 0f)
-                        } finally { highlight.dispose() }
-                    }
-                    character = end
-                }
+                AmllWordPainter.draw(copy, shaped, text, words, position, origin, baseline, font.size2D, motion)
+                return
             }
+            copy.color = color
+            layout.draw(copy, origin, baseline)
         } finally { copy.dispose() }
     }
 }

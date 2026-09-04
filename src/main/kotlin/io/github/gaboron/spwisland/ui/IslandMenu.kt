@@ -9,9 +9,25 @@ import javax.swing.*
 /** Recovery controls remain available in SPW settings even if the tray is unavailable. */
 class IslandMenu(private val store: SettingsStore, private val report: (Throwable) -> Unit) : AutoCloseable {
     private var tray: TrayIcon? = null
+    private var settingsWindow: JFrame? = null
+    fun settings() {
+        val existing = settingsWindow
+        if (existing != null && existing.isDisplayable) {
+            (existing.contentPane as? IslandSettingsPanel)?.refresh()
+            existing.isVisible = true; existing.toFront(); return
+        }
+        settingsWindow = JFrame("灵动词岛设置").apply {
+            defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
+            contentPane = IslandSettingsPanel(store)
+            pack(); setSize(maxOf(width, 640), height)
+            setLocationRelativeTo(null); isVisible = true
+        }
+    }
     private fun action(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
     fun popup(owner: Component, x: Int, y: Int) {
         val menu = JPopupMenu()
+        menu.add(JMenuItem("词岛设置…").apply { addActionListener { settings() } })
+        menu.addSeparator()
         fun toggle(label: String, key: String, value: Boolean) {
             menu.add(JCheckBoxMenuItem(label, value).apply { addActionListener { action { store.set(key, isSelected) } } })
         }
@@ -45,6 +61,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         fun item(label: String, block: () -> Unit) { menu.add(MenuItem(label).apply {
             addActionListener { SwingUtilities.invokeLater { action(block) } }
         }) }
+        item("词岛设置…") { settings() }
         item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
         item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
         item("重置位置") { store.resetPosition() }
@@ -67,9 +84,16 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             "创意及视觉改编：CC BY-SA 4.0\n" +
             "https://creativecommons.org/licenses/by-sa/4.0/\n\n" +
             "本项目为独立 SPW 插件，重新实现渲染、交互和时序；非官方 Lyricify 产品。\n" +
-            "新增程序代码：GPL-3.0-only；SPW API：Apache-2.0。\n" +
+            "AMLL 歌词动画：AMLL contributors / Steve-xmh\n" +
+            "https://github.com/amll-dev/applemusic-like-lyrics\n" +
+            "动画移植模块：AGPL-3.0-only；其他程序：GPL-3.0-only。\n" +
+            "按两者第 13 条组合分发；SPW API：Apache-2.0。\n" +
+            "在适用法律允许范围内不提供担保，可按对应许可证再分发。\n" +
             "完整许可、第三方声明及对应源码随插件 ZIP 提供。",
             "关于与许可", JOptionPane.INFORMATION_MESSAGE)
     }
-    override fun close() { tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null }
+    override fun close() {
+        settingsWindow?.dispose(); settingsWindow = null
+        tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null
+    }
 }
