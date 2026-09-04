@@ -1,0 +1,126 @@
+{
+  "configs": [
+    {
+      "title": "灵动词岛",
+      "config": "island.json",
+      "preferences": [
+        {
+          "type": "switch",
+          "key": "enabled",
+          "title": "显示词岛",
+          "summary": "SPW 内可按 Ctrl+Shift+D 显示或隐藏。",
+          "default_value": true
+        },
+        {
+          "type": "list",
+          "key": "shape",
+          "title": "外观",
+          "entries": [
+            "胶囊",
+            "顶部刘海"
+          ],
+          "entry_values": [
+            "pill",
+            "notch"
+          ],
+          "default_value": "pill"
+        },
+        {
+          "type": "switch",
+          "key": "translation",
+          "title": "显示翻译",
+          "summary": "仅当 SPW 提供翻译时显示第二行。",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "karaoke",
+          "title": "逐字高亮",
+          "summary": "需要歌词带有逐字时间戳；普通逐行歌词保持整行显示。",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "click_through",
+          "title": "鼠标穿透",
+          "summary": "启用后不能拖动或点击词岛，可在此关闭，或从托盘解锁。",
+          "default_value": false
+        },
+        {
+          "type": "switch",
+          "key": "hide_fullscreen",
+          "title": "当前屏幕有前台全屏窗口时隐藏",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "hide_paused",
+          "title": "暂停时隐藏",
+          "default_value": false
+        },
+        {
+          "type": "switch",
+          "key": "reduced_motion",
+          "title": "减少动画",
+          "summary": "关闭窗口伸缩与换行动画，降低刷新频率。",
+          "default_value": false
+        },
+        {
+          "type": "button",
+          "title": "找回词岛",
+          "summary": "显示词岛、解除鼠标穿透并回到主屏幕顶部。",
+          "arrow_type": "none",
+          "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.recover"
+        },
+        {
+          "type": "edittext",
+          "key": "font_family",
+          "title": "字体",
+          "default_value": "Microsoft YaHei UI"
+        },
+        {
+          "type": "edittext",
+          "key": "font_size",
+          "title": "字号",
+          "default_value": "22",
+          "summary": "输入整数，范围 14 至 42。"
+        },
+        {
+          "type": "edittext",
+          "key": "max_width",
+          "title": "最大宽度",
+          "default_value": "640",
+          "summary": "输入整数，范围 280 至 1200。"
+        },
+        {
+          "type": "edittext",
+          "key": "opacity",
+          "title": "背景不透明度（%）",
+          "default_value": "96",
+          "summary": "输入整数，范围 35 至 100。"
+        },
+        {
+          "type": "edittext",
+          "key": "offset_ms",
+          "title": "逐字高亮偏移（毫秒，正值提前）",
+          "default_value": "0",
+          "summary": "输入整数，范围 -2000 至 2000。"
+        },
+        {
+          "type": "button",
+          "title": "Lyricify / WXRIW · 原创署名与许可证",
+          "summary": "灵动词岛创意与视觉改编：CC BY-SA 4.0；新增程序代码：GPL-3.0-only。",
+          "arrow_type": "none",
+          "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.about"
+        },
+        {
+          "type": "button",
+          "title": "项目源代码（GitHub）",
+          "summary": "查看源代码、反馈问题与参与贡献。",
+          "arrow_type": "link",
+          "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.openSource"
+        }
+      ]
+    }
+  ]
+}

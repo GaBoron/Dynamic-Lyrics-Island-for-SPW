@@ -1,0 +1,11 @@
+JNA 5.17.0 native dependency notice
+
+JNA includes libffi in its native dispatch library.
+libffi - Copyright (c) 1996-2022 Anthony Green, Red Hat, Inc and others.
+The full upstream license is reproduced in JNA-libffi-LICENSE.txt.
+Source: https://github.com/java-native-access/jna/blob/5.17.0/native/libffi/LICENSE
+
+JNA itself is dual licensed; this distribution selects Apache-2.0.
+The unmodified upstream license declaration is in JNA-LICENSE.txt and
+META-INF/LICENSE within each distributed JNA JAR. Apache-2.0.txt contains
+the full license text.

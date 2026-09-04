@@ -1,0 +1,8 @@
+.gradle/
+.kotlin/
+build/
+.idea/
+*.iml
+.codex/
+.agents/
+AGENTS.md

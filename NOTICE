@@ -1,0 +1,35 @@
+Dynamic Lyrics Island for SPW
+Copyright (C) 2026 GaBoron
+
+Dynamic Lyrics Island / 灵动词岛 was created by Lyricify, WXRIW (XY Wang).
+Original concept published in Lyricify 3.8.1-release, created 2022-09-30.
+Source and attribution statement:
+https://github.com/WXRIW/Lyricify-App#lyricify-原创
+The original creator licenses this creation under CC BY-SA 4.0:
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Changes in this independent adaptation: integration with SPW playback callbacks;
+new Kotlin/Java2D rendering, animation, controls, timeline interpolation,
+configuration, screen placement and Windows window behavior. The visual and
+interaction adaptation is shared under CC BY-SA 4.0. No Lyricify application
+binaries, logos, screenshots or private source code are included in this plugin.
+This project is not affiliated with, sponsored by or endorsed by Lyricify or WXRIW.
+
+New program code is licensed under GPL-3.0-only (see LICENSE). GPLv3 is a
+BY-SA 4.0 Compatible License for adaptations; this does not relicense the
+original Lyricify creation or remove its attribution and CC BY-SA obligations.
+https://creativecommons.org/compatible-licenses/
+
+SPW Workshop API and example build layout
+Copyright (C) 2025 Moriafly
+https://github.com/Moriafly/spw-workshop-api
+Licensed under the Apache License, Version 2.0.
+API dependency: 0.1.0-dev20, provided by the host, not bundled.
+Build layout adapted for this plugin; no API implementation is vendored.
+
+The Gradle wrapper is from the SPW Workshop API repository (tag 0.1.0-dev20),
+copyright its respective Gradle contributors, Apache-2.0.
+Wrapper configuration changed to Gradle 9.2.1 with distribution SHA-256 checking.
+
+See THIRD_PARTY_NOTICES.md and licenses/ for dependency licenses.
+Keep this attribution and all applicable license notices when redistributing.
