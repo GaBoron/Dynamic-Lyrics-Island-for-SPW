@@ -3,6 +3,7 @@ package io.github.gaboron.spwisland.platform
 
 import com.sun.jna.Native
 import com.sun.jna.Platform
+import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HWND
 import com.sun.jna.platform.win32.WinDef.RECT
@@ -13,6 +14,16 @@ import java.awt.Window
 class WindowsOverlay {
     private val user32 = if (Platform.isWindows()) User32.INSTANCE else null
     private fun handle(window: Window) = HWND(Native.getWindowPointer(window))
+
+    fun reinforceTopmost(window: Window) {
+        val api = user32 ?: return
+        if (!window.isDisplayable || !window.isVisible) return
+        // Reassert the top of the topmost band without moving, resizing or taking keyboard focus.
+        val flags = 0x0001 or 0x0002 or 0x0010 or 0x0200 // NOSIZE | NOMOVE | NOACTIVATE | NOOWNERZORDER
+        check(api.SetWindowPos(handle(window), HWND(Pointer.createConstant(-1)), 0, 0, 0, 0, flags)) {
+            "无法维持词岛置顶：${Native.getLastError()}"
+        }
+    }
 
     fun clickThrough(window: Window, enabled: Boolean) {
         val api = user32 ?: return

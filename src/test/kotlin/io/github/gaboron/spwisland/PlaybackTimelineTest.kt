@@ -67,4 +67,12 @@ class PlaybackTimelineTest {
         assertEquals(listOf(word), LyricLine(0, 500, "Hello", null, listOf(word)).timedWords)
         assertTrue(LyricLine(0, 500, "X", null, listOf(Word(300, 100, "X"))).timedWords.isEmpty())
     }
+    @Test fun wholeLineTimingDoesNotEnableKaraoke() {
+        assertTrue(LyricLine(100, 900, "只有逐行歌词", null,
+            listOf(Word(100, 900, "只有逐行歌词"))).timedWords.isEmpty())
+        assertTrue(LyricLine(100, 900, "逐行", null,
+            listOf(Word(100, 900, "逐"), Word(100, 900, "行"))).timedWords.isEmpty())
+        val words = listOf(Word(100, 400, "逐字"), Word(400, 900, "歌词"))
+        assertEquals(words, LyricLine(100, 900, "逐字歌词", null, words).timedWords)
+    }
 }

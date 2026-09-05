@@ -29,6 +29,8 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var closed = false
     private var fullscreen = false
     private var nextScreenCheck = 0L
+    private var nextTopmostCheck = 0L
+    private var topmostAvailable = true
     private var lastFrame = System.nanoTime()
     private var lastLine: LyricLine? = null
     private var previousSnapshot: PlaybackSnapshot? = null
@@ -117,7 +119,10 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (abs(width - desired.width) < .5) width = desired.width.toDouble()
         if (abs(height - desired.height) < .5) height = desired.height.toDouble()
         val bounds = IslandGeometry.clamp(screen, center, top, width.roundToInt(), height.roundToInt())
+        val resized = window.width != bounds.width || window.height != bounds.height
         if (window.bounds != bounds) window.bounds = bounds
+        // Preserve per-pixel alpha at the corners; a native window shape is a hard-edged region.
+        if (resized) window.validate()
         panel.doLayout()
         if (nativeAvailable && now >= nextScreenCheck) {
             try { fullscreen = settings.hideFullscreen && native.foregroundIsFullscreen(window) }
@@ -125,12 +130,22 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             nextScreenCheck = now + 400_000_000
         }
         val visible = settings.enabled && (!settings.hidePaused || snap.playing) && (!settings.hideFullscreen || !fullscreen)
-        if (window.isVisible != visible) window.isVisible = visible
+        if (window.isVisible != visible) {
+            window.isVisible = visible
+            nextTopmostCheck = 0
+        }
+        if (visible && topmostAvailable && now >= nextTopmostCheck) {
+            try { native.reinforceTopmost(window) }
+            catch (error: Exception) { topmostAvailable = false; report(error) }
+            nextTopmostCheck = now + 100_000_000
+        }
         if (nativeAvailable && clickThroughApplied != settings.clickThrough) {
             try { native.clickThrough(window, settings.clickThrough); clickThroughApplied = settings.clickThrough }
             catch (error: Exception) { nativeAvailable = false; report(error) }
         }
-        if (visible) panel.repaint()
+        if (visible) {
+            if (resized) panel.paintImmediately(0, 0, panel.width, panel.height) else panel.repaint()
+        }
         timer.delay = if (!visible) 200 else if (settings.reducedMotion || !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble()) 50 else 16
     }
     override fun close() {

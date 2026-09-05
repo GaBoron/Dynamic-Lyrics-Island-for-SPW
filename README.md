@@ -8,7 +8,7 @@
 
 需要 Windows 10/11，以及兼容 **SPW Workshop API 0.1.0-dev20** 的 SPW 版本。真实进程频谱需要 Windows **20348 或更高版本**（包括 Windows 11）和共享模式音频输出；较旧系统仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用 Windows 自带的 .NET Framework 4.x。
 
-1. 获取构建产物 `dynamic-lyrics-island-for-spw-0.1.0.zip`，或按[开发说明](docs/development.md)自行构建。
+1. 获取构建产物 `dynamic-lyrics-island-for-spw-0.1.1.zip`，或按[开发说明](docs/development.md)自行构建。
 2. 在 SPW 的创意工坊／插件管理中导入 ZIP，启用 **Dynamic Lyrics Island for SPW**。若当前 SPW 没有导入入口，可在退出 SPW 后将 ZIP 放进 `%APPDATA%\Salt Player for Windows\workshop\plugins\`，再启动 SPW。
 3. 播放一首带歌词的歌曲。若在播放过程中才启用插件，请切换一次歌曲，让 SPW 重新发送歌词和曲目信息。
 4. 在 SPW 插件配置中点击“词岛设置（整数滑块、字体与全部选项）”，调整外观、字号、宽度和翻译。也可从词岛右键或托盘打开同一窗口。开关即时保存并生效；滑块松开后保存，可用方向键逐个整数调整，或直接在右侧输入整数。

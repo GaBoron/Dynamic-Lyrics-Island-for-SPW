@@ -14,7 +14,8 @@ data class LyricLine(val startMs: Long, val endMs: Long, val text: String,
     // Only render cell-level timing when cells describe the displayed string exactly.
     // Ordinary LRC or malformed timing stays readable without invented word timestamps.
     val timedWords: List<Word> = words.takeIf { cells ->
-        cells.isNotEmpty() && cells.joinToString("") { it.text } == text &&
+        cells.isNotEmpty() && !cells.all { it.startMs == startMs && it.endMs == endMs } &&
+            cells.joinToString("") { it.text } == text &&
             cells.all { it.endMs >= it.startMs } &&
             cells.zipWithNext().all { (a, b) -> a.startMs <= b.startMs }
     }.orEmpty()

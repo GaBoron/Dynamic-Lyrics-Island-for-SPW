@@ -4,27 +4,23 @@ package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.Word
 import java.awt.*
-import java.text.BreakIterator
-import java.util.Locale
 
 /** Transforms shaped graphemes, preserving fallback fonts and whole-line shaping. */
 object AmllWordPainter {
     fun draw(g: Graphics2D, shaped: ShapedText, text: String, words: List<Word>, time: Long,
              origin: Float, baseline: Float, fontSize: Float, motion: Boolean) {
-        val breaks = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
-        var wordStart = 0
+        val geometry = WordGeometry.ready(shaped, text, words.map { it.text })
+        if (geometry == null) {
+            drawTimed(g, shaped, words, time, origin, baseline, fontSize)
+            return
+        }
         for ((wordIndex, word) in words.withIndex()) {
-            val wordEnd = (wordStart + word.text.length).coerceAtMost(text.length)
-            val wordBounds = shaped.layout.getLogicalHighlightShape(wordStart, wordEnd).bounds2D
-            val clusters = mutableListOf<Pair<Int, Int>>()
-            var start = wordStart
-            while (start < wordEnd) {
-                val next = breaks.following(start).takeUnless { it == BreakIterator.DONE } ?: wordEnd
-                val end = minOf(next, wordEnd); clusters += start to end; start = end
-            }
-            for ((index, range) in clusters.withIndex()) {
-                val bounds = shaped.layout.getLogicalHighlightShape(range.first, range.second).bounds2D
-                val area = shaped.glyph(range.first, range.second)
+            val cell = geometry[wordIndex]
+            val wordBounds = cell.bounds
+            val clusters = cell.clusters
+            for ((index, cluster) in clusters.withIndex()) {
+                val bounds = cluster.bounds
+                val area = cluster.shape
                 val pose = if (motion) AmllMotion.word(word, time, index, clusters.size, wordIndex == words.lastIndex) else AmllMotion.Pose()
                 val copy = g.create() as Graphics2D
                 try {
@@ -38,22 +34,42 @@ object AmllWordPainter {
                             copy.draw(area)
                         }
                     }
-                    val progress = word.progress(time)
-                    val dim = Color(126, 129, 138)
-                    val boundary = if (shaped.layout.isLeftToRight) wordBounds.x + wordBounds.width * progress
-                        else wordBounds.maxX - wordBounds.width * progress
-                    val feather = minOf(fontSize * .45, wordBounds.width * .6).toFloat().coerceAtLeast(.01f)
-                    copy.paint = when {
-                        progress <= 0 -> dim
-                        progress >= 1 -> Color.WHITE
-                        else -> GradientPaint(boundary.toFloat() - feather / 2, 0f,
-                            if (shaped.layout.isLeftToRight) Color.WHITE else dim,
-                            boundary.toFloat() + feather / 2, 0f, if (shaped.layout.isLeftToRight) dim else Color.WHITE)
-                    }
+                    copy.paint = highlight(shaped, wordBounds, word.progress(time), fontSize)
                     copy.fill(area)
                 } finally { copy.dispose() }
             }
-            wordStart = wordEnd
+        }
+    }
+
+    /** Timing is independent of outline readiness; only floating/glow waits for preparation. */
+    internal fun drawTimed(g: Graphics2D, shaped: ShapedText, words: List<Word>, time: Long,
+                           origin: Float, baseline: Float, fontSize: Float) {
+        var start = 0
+        for (word in words) {
+            val end = start + word.text.length
+            val region = shaped.layout.getLogicalHighlightShape(start, end)
+            val copy = g.create() as Graphics2D
+            try {
+                copy.translate(origin.toDouble(), baseline.toDouble())
+                copy.clip(region)
+                copy.paint = highlight(shaped, region.bounds2D, word.progress(time), fontSize)
+                shaped.layout.draw(copy, 0f, 0f)
+            } finally { copy.dispose() }
+            start = end
+        }
+    }
+
+    private fun highlight(shaped: ShapedText, bounds: java.awt.geom.Rectangle2D,
+                          progress: Double, fontSize: Float): Paint {
+        val dim = Color(126, 129, 138)
+        val ltr = shaped.layout.isLeftToRight
+        val boundary = if (ltr) bounds.x + bounds.width * progress else bounds.maxX - bounds.width * progress
+        val feather = minOf(fontSize * .45, bounds.width * .6).toFloat().coerceAtLeast(.01f)
+        return when {
+            progress <= 0 -> dim
+            progress >= 1 -> Color.WHITE
+            else -> GradientPaint(boundary.toFloat() - feather / 2, 0f, if (ltr) Color.WHITE else dim,
+                boundary.toFloat() + feather / 2, 0f, if (ltr) dim else Color.WHITE)
         }
     }
 }

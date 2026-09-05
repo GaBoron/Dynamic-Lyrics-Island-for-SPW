@@ -12,12 +12,13 @@ object LyricPainter {
         if (text.isEmpty() || available <= 0) return
         val shaped = LyricTypography.shape(text, font)
         val layout = shaped.layout
+        val geometry = if (karaoke && words.isNotEmpty()) WordGeometry.ready(shaped, text, words.map { it.text }) else null
         var character = 0
         var activeX = 0.0
-        for (word in words) {
+        for ((index, word) in words.withIndex()) {
             val end = (character + word.text.length).coerceAtMost(text.length)
             if (end > character && word.progress(position) > 0) {
-                val bounds = layout.getLogicalHighlightShape(character, end).bounds2D
+                val bounds = geometry?.get(index)?.bounds ?: layout.getLogicalHighlightShape(character, end).bounds2D
                 activeX = bounds.x + bounds.width * word.progress(position)
             }
             character = end

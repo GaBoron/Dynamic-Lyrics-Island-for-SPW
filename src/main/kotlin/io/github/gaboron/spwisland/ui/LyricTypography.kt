@@ -47,7 +47,7 @@ object LyricTypography {
 class ShapedText(val layout: TextLayout) {
     val outline by lazy { layout.getOutline(null) }
     private val glyphs = mutableMapOf<Pair<Int, Int>, java.awt.Shape>()
-    fun glyph(start: Int, end: Int): java.awt.Shape = glyphs.getOrPut(start to end) {
+    @Synchronized fun glyph(start: Int, end: Int): java.awt.Shape = glyphs.getOrPut(start to end) {
         val bounds = layout.getLogicalHighlightShape(start, end).bounds2D
         val minX = if (start == 0) minOf(bounds.x, left.toDouble()) else bounds.x
         val maxX = if (end == layout.characterCount) maxOf(bounds.maxX, right.toDouble()) else bounds.maxX

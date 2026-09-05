@@ -51,6 +51,11 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     override fun paintComponent(graphics: Graphics) {
         val g = graphics.create() as Graphics2D
         try {
+            // A resized translucent surface must not retain pixels from the previous silhouette.
+            val composite = g.composite
+            g.composite = AlphaComposite.Clear
+            g.fillRect(0, 0, width, height)
+            g.composite = composite
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
