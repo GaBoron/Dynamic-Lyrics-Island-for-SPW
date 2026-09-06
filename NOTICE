@@ -50,3 +50,9 @@ combination permissions in section 13 of GPLv3 and AGPLv3; both licenses and
 the complete corresponding source accompany every plugin distribution.
 This does not change the original Lyricify CC BY-SA 4.0 attribution or license.
 No warranty is provided, to the extent permitted by applicable law.
+
+Jaudiotagger 3.0.1, Copyright Paul Taylor and contributors.
+https://www.jthink.net/jaudiotagger/
+Unmodified library under LGPL-2.1-or-later (licenses/LGPL-2.1.txt).
+Used only for local metadata reading. The replaceable library JAR is in lib/;
+its corresponding upstream source JAR is included in source/.

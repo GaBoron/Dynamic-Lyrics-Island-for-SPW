@@ -24,6 +24,7 @@
 | [SPW Workshop API](https://github.com/Moriafly/spw-workshop-api)，Moriafly | 编译使用 0.1.0-dev20；由 SPW 提供，不装入插件 | Apache-2.0；[完整文本](licenses/Apache-2.0.txt)，署名见 [NOTICE](NOTICE) |
 | [SPW API example](https://github.com/Moriafly/spw-workshop-api/tree/0.1.0-dev20/example) | 改编 Gradle 插件 ZIP 布局与清单配置 | Apache-2.0；改动见 NOTICE |
 | [JNA / JNA Platform](https://github.com/java-native-access/jna/tree/5.17.0)，JNA contributors | 随包提供 5.17.0；Windows 鼠标穿透与全屏判断 | JNA 双许可中选择 Apache-2.0；保留 [JNA LICENSE](licenses/JNA-LICENSE.txt)、[第三方声明](licenses/JNA-THIRD-PARTY.txt)、[libffi 许可](licenses/JNA-libffi-LICENSE.txt) 与 JAR 内原始许可 |
+| [Jaudiotagger](https://www.jthink.net/jaudiotagger/)，Paul Taylor 与 contributors | 随包提供未修改的 3.0.1，仅读取本地音频时长与内嵌封面；独立 JAR 可替换 | LGPL-2.1-or-later；附带 [许可全文](licenses/LGPL-2.1.txt) 与 `source/jaudiotagger-3.0.1-sources.jar` |
 | [Kotlin](https://github.com/JetBrains/kotlin)，JetBrains | 编译工具和宿主标准库，不装入插件 | Apache-2.0 |
 | [PF4J](https://github.com/pf4j/pf4j)，Decebal Suiu | 编译和测试使用 3.12.0，由宿主提供 | Apache-2.0 |
 | [Gradle](https://github.com/gradle/gradle)，Gradle contributors | Wrapper 来自 SPW API 0.1.0-dev20，构建使用 9.2.1 | Apache-2.0；Wrapper 自带声明保留，发行包不内嵌 Gradle 发行版 |

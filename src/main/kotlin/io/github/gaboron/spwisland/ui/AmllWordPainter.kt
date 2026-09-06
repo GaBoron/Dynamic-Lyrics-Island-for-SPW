@@ -8,10 +8,10 @@ import java.awt.*
 /** Transforms shaped graphemes, preserving fallback fonts and whole-line shaping. */
 object AmllWordPainter {
     fun draw(g: Graphics2D, shaped: ShapedText, text: String, words: List<Word>, time: Long,
-             origin: Float, baseline: Float, fontSize: Float, motion: Boolean) {
+             origin: Float, baseline: Float, fontSize: Float, motion: Boolean, color: Color = Color.WHITE) {
         val geometry = WordGeometry.ready(shaped, text, words.map { it.text })
         if (geometry == null) {
-            drawTimed(g, shaped, words, time, origin, baseline, fontSize)
+            drawTimed(g, shaped, words, time, origin, baseline, fontSize, color)
             return
         }
         for ((wordIndex, word) in words.withIndex()) {
@@ -29,12 +29,12 @@ object AmllWordPainter {
                     copy.scale(pose.scale, pose.scale); copy.translate(-bounds.centerX, -bounds.centerY)
                     if (pose.glow > .001) {
                         for (radius in 3 downTo 1) {
-                            copy.color = Color(255, 255, 255, (pose.glow * 55 / radius).toInt().coerceIn(0, 255))
+                            copy.color = Color(color.red, color.green, color.blue, (pose.glow * 55 / radius).toInt().coerceIn(0, 255))
                             copy.stroke = BasicStroke(fontSize * .035f * radius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
                             copy.draw(area)
                         }
                     }
-                    copy.paint = highlight(shaped, wordBounds, word.progress(time), fontSize)
+                    copy.paint = highlight(shaped, wordBounds, word.progress(time), fontSize, color)
                     copy.fill(area)
                 } finally { copy.dispose() }
             }
@@ -43,7 +43,7 @@ object AmllWordPainter {
 
     /** Timing is independent of outline readiness; only floating/glow waits for preparation. */
     internal fun drawTimed(g: Graphics2D, shaped: ShapedText, words: List<Word>, time: Long,
-                           origin: Float, baseline: Float, fontSize: Float) {
+                           origin: Float, baseline: Float, fontSize: Float, color: Color = Color.WHITE) {
         var start = 0
         for (word in words) {
             val end = start + word.text.length
@@ -52,7 +52,7 @@ object AmllWordPainter {
             try {
                 copy.translate(origin.toDouble(), baseline.toDouble())
                 copy.clip(region)
-                copy.paint = highlight(shaped, region.bounds2D, word.progress(time), fontSize)
+                copy.paint = highlight(shaped, region.bounds2D, word.progress(time), fontSize, color)
                 shaped.layout.draw(copy, 0f, 0f)
             } finally { copy.dispose() }
             start = end
@@ -60,16 +60,16 @@ object AmllWordPainter {
     }
 
     private fun highlight(shaped: ShapedText, bounds: java.awt.geom.Rectangle2D,
-                          progress: Double, fontSize: Float): Paint {
+                          progress: Double, fontSize: Float, color: Color): Paint {
         val dim = Color(126, 129, 138)
         val ltr = shaped.layout.isLeftToRight
         val boundary = if (ltr) bounds.x + bounds.width * progress else bounds.maxX - bounds.width * progress
         val feather = minOf(fontSize * .45, bounds.width * .6).toFloat().coerceAtLeast(.01f)
         return when {
             progress <= 0 -> dim
-            progress >= 1 -> Color.WHITE
-            else -> GradientPaint(boundary.toFloat() - feather / 2, 0f, if (ltr) Color.WHITE else dim,
-                boundary.toFloat() + feather / 2, 0f, if (ltr) dim else Color.WHITE)
+            progress >= 1 -> color
+            else -> GradientPaint(boundary.toFloat() - feather / 2, 0f, if (ltr) color else dim,
+                boundary.toFloat() + feather / 2, 0f, if (ltr) dim else color)
         }
     }
 }

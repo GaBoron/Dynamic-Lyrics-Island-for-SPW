@@ -5,11 +5,120 @@
       "config": "island.json",
       "preferences": [
         {
-          "type": "button",
-          "title": "词岛设置（整数滑块、字体与全部选项）",
-          "summary": "打开完整设置窗口。滑块步进为 1，也可直接输入整数。更改保存后立即生效。",
-          "arrow_type": "none",
-          "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.showSettings"
+          "type": "switch",
+          "key": "enabled",
+          "title": "显示词岛",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "translation",
+          "title": "显示翻译",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "karaoke",
+          "title": "逐字高亮与长音强调",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "click_through",
+          "title": "鼠标穿透",
+          "default_value": false
+        },
+        {
+          "type": "switch",
+          "key": "hide_fullscreen",
+          "title": "全屏时隐藏",
+          "default_value": true
+        },
+        {
+          "type": "switch",
+          "key": "hide_paused",
+          "title": "暂停时隐藏",
+          "default_value": false
+        },
+        {
+          "type": "switch",
+          "key": "reduced_motion",
+          "title": "减少动画",
+          "default_value": false
+        },
+        {
+          "type": "list",
+          "key": "shape",
+          "title": "外观",
+          "entries": [
+            "胶囊",
+            "顶部刘海"
+          ],
+          "entry_values": [
+            "pill",
+            "notch"
+          ],
+          "default_value": "pill"
+        },
+        {
+          "type": "edittext",
+          "key": "font_family",
+          "title": "字体",
+          "default_value": "Microsoft YaHei UI",
+          "summary": "输入已安装的字体名称。"
+        },
+        {
+          "type": "seekbar",
+          "key": "font_size",
+          "title": "字号",
+          "default_value": 22,
+          "min": 14,
+          "max": 42
+        },
+        {
+          "type": "seekbar",
+          "key": "max_width",
+          "title": "最大宽度",
+          "default_value": 640,
+          "min": 280,
+          "max": 1200
+        },
+        {
+          "type": "seekbar",
+          "key": "opacity",
+          "title": "背景不透明度 %",
+          "default_value": 96,
+          "min": 35,
+          "max": 100
+        },
+        {
+          "type": "seekbar",
+          "key": "offset_ms",
+          "title": "逐字高亮偏移 ms",
+          "default_value": 0,
+          "min": -2000,
+          "max": 2000
+        },
+        {
+          "type": "switch",
+          "key": "lyric_cover_color",
+          "title": "歌词高亮与辉光使用封面颜色",
+          "default_value": false,
+          "summary": "从本地音频内嵌封面或同目录 cover/folder 图片取色，无封面时使用默认颜色。"
+        },
+        {
+          "type": "switch",
+          "key": "background_cover_color",
+          "title": "背景使用封面颜色",
+          "default_value": false,
+          "summary": "从本地音频内嵌封面或同目录 cover/folder 图片取色，无封面时使用默认颜色。"
+        },
+        {
+          "type": "switch",
+          "key": "spectrum_cover_color",
+          "title": "频谱使用封面颜色",
+          "default_value": false,
+          "summary": "从本地音频内嵌封面或同目录 cover/folder 图片取色，无封面时使用默认颜色。"
         },
         {
           "type": "button",

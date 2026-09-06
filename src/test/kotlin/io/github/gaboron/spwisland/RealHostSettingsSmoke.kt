@@ -4,11 +4,11 @@ package io.github.gaboron.spwisland
 
 import com.xuncorp.spw.workshop.api.config.*
 import io.github.gaboron.spwisland.host.HostSettings
-import io.github.gaboron.spwisland.ui.IslandSettingsPanel
-import java.awt.Container
+
+
 import java.nio.file.*
 import java.util.function.Consumer
-import javax.swing.*
+
 
 /** Run with an installed SPW runtime/classpath; the fixture path must be a disposable build file. */
 fun main(args: Array<String>) {
@@ -35,37 +35,9 @@ fun main(args: Array<String>) {
         settings.refresh()
         check(!settings.read().enabled && settings.read().fontSize == 31) { "Partial write replaced accepted settings" }
         check(external.save()); settings.refresh()
-        SwingUtilities.invokeAndWait {
-            val panel = IslandSettingsPanel(settings)
-            fun descendants(root: Container): List<java.awt.Component> = root.components.flatMap {
-                listOf(it) + if (it is Container) descendants(it) else emptyList()
-            }
-            val controls = descendants(panel)
-            panel.setSize(640, panel.preferredSize.height)
-            fun layout(root: Container) { root.doLayout(); root.components.filterIsInstance<Container>().forEach(::layout) }
-            layout(panel)
-            val image = java.awt.image.BufferedImage(panel.width, panel.height, java.awt.image.BufferedImage.TYPE_INT_RGB)
-            image.createGraphics().let { panel.printAll(it); it.dispose() }
-            Files.createDirectories(Path.of("build/preview"))
-            javax.imageio.ImageIO.write(image, "png", Path.of("build/preview/settings.png").toFile())
-            for (box in controls.filterIsInstance<JCheckBox>()) {
-                val expected = !box.isSelected; box.doClick()
-                check(helper().get(box.name, !expected) == expected) { "Switch did not persist: ${box.name}" }
-            }
-            for (slider in controls.filterIsInstance<JSlider>()) {
-                check(slider.snapToTicks && slider.minorTickSpacing == 1)
-                val target = slider.value + 1
-                slider.value = target
-                check(helper().get(slider.name, Int.MIN_VALUE) == target) { "Slider did not persist integer: ${slider.name}" }
-                val spinner = controls.filterIsInstance<JSpinner>().single { it.name == "${slider.name}.value" }
-                spinner.value = target + 1
-                check(slider.value == target + 1 && helper().get(slider.name, Int.MIN_VALUE) == target + 1)
-            }
-            controls.filterIsInstance<JComboBox<*>>().single { it.name == "shape" }.selectedIndex = 1
-            controls.filterIsInstance<JComboBox<*>>().single { it.name == "font_family" }.selectedItem = "Malgun Gothic"
-            check(settings.read().notch && settings.read().fontFamily == "Malgun Gothic")
-        }
-        check(changes > 10)
-        println("PASS: real SPW helper, missed callbacks, partial writes, 7 switches, 4 integer sliders/spinners, shape/font, disk round-trip")
+        external.set("lyric_cover_color", true); check(external.save()); settings.refresh()
+        check(settings.read().lyricCoverColor)
+        check(changes > 0)
+        println("PASS: real SPW helper, missed callbacks, partial writes, native preference updates, disk round-trip")
     }
 }

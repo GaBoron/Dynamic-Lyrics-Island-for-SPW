@@ -9,24 +9,10 @@ import javax.swing.*
 /** Recovery controls remain available in SPW settings even if the tray is unavailable. */
 class IslandMenu(private val store: SettingsStore, private val report: (Throwable) -> Unit) : AutoCloseable {
     private var tray: TrayIcon? = null
-    private var settingsWindow: JFrame? = null
-    fun settings() {
-        val existing = settingsWindow
-        if (existing != null && existing.isDisplayable) {
-            (existing.contentPane as? IslandSettingsPanel)?.refresh()
-            existing.isVisible = true; existing.toFront(); return
-        }
-        settingsWindow = JFrame("灵动词岛设置").apply {
-            defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
-            contentPane = IslandSettingsPanel(store)
-            pack(); setSize(maxOf(width, 640), height)
-            setLocationRelativeTo(null); isVisible = true
-        }
-    }
     private fun action(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
     fun popup(owner: Component, x: Int, y: Int) {
         val menu = JPopupMenu()
-        menu.add(JMenuItem("词岛设置…").apply { addActionListener { settings() } })
+        menu.add(JMenuItem("完整设置请在 SPW 插件配置中调整").apply { isEnabled = false })
         menu.addSeparator()
         fun toggle(label: String, key: String, value: Boolean) {
             menu.add(JCheckBoxMenuItem(label, value).apply { addActionListener { action { store.set(key, isSelected) } } })
@@ -61,7 +47,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         fun item(label: String, block: () -> Unit) { menu.add(MenuItem(label).apply {
             addActionListener { SwingUtilities.invokeLater { action(block) } }
         }) }
-        item("词岛设置…") { settings() }
+
         item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
         item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
         item("重置位置") { store.resetPosition() }
@@ -93,7 +79,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             "关于与许可", JOptionPane.INFORMATION_MESSAGE)
     }
     override fun close() {
-        settingsWindow?.dispose(); settingsWindow = null
+
         tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null
     }
 }

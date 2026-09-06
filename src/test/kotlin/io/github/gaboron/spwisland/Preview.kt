@@ -44,7 +44,8 @@ fun main() {
         var index = 0
         fun select(direction: Int) {
             index = Math.floorMod(index + direction, examples.size)
-            timeline.trackChanged(Track("预览 · 原创示例 ${index + 1}", "Dynamic Lyrics Island for SPW", "demo-$index"))
+            val token = timeline.trackChanged(Track("预览 · 原创示例 ${index + 1}", "Dynamic Lyrics Island for SPW", "demo-$index"))
+            timeline.metadataLoaded(token, TrackMetadata(examples[index].endMs, Color(50, 150, 220).rgb))
             timeline.positionChanged(0); timeline.lineChanged(examples[index])
             timeline.stateChanged(PlaybackStatus.READY); timeline.playingChanged(true)
         }
@@ -52,6 +53,7 @@ fun main() {
             override fun previous() = select(-1)
             override fun next() = select(1)
             override fun toggle() { timeline.playingChanged(!timeline.snapshot().playing) }
+            override fun seek(positionMs: Long) { timeline.seek(positionMs); timeline.lineChanged(examples[index]) }
         }
         window = IslandWindow(timeline, store, actions, report = { error ->
             error.printStackTrace(); JOptionPane.showMessageDialog(null, error.message)

@@ -30,6 +30,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         if (loaded) changed()
     }
     init {
+        migrateNumericText()
         accepted = decode()
         manager.addConfigChangeListener("island.json", listener)
         // SPW can fail to register its watcher when a plugin's data directory does not yet exist.
@@ -40,11 +41,27 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     }
 
     override fun read(): IslandSettings = synchronized(lock) { accepted ?: decode() }
+    private fun migrateNumericText() {
+        // Native sliders use numbers; migrate the previous text fields.
+        if (!Files.exists(config.getConfigPath()) || !config.reload()) return
+        var migrated = false
+        for ((key, limits) in mapOf("font_size" to Triple(22, 14, 42), "max_width" to Triple(640, 280, 1200),
+            "opacity" to Triple(96, 35, 100), "offset_ms" to Triple(0, -2000, 2000))) {
+            if (config.get<Any>(key, "") is String) {
+                config.set(key, number(key, limits.first, limits.second, limits.third))
+                migrated = true
+            }
+        }
+        if (migrated) check(config.save()) { "词岛旧设置迁移失败，请检查 SPW 配置目录权限。" }
+    }
     private fun decode(): IslandSettings = IslandSettings(
         enabled = config.get("enabled", true), translation = config.get("translation", true),
         karaoke = config.get("karaoke", true), hidePaused = config.get("hide_paused", false),
         hideFullscreen = config.get("hide_fullscreen", true), clickThrough = config.get("click_through", false),
         reducedMotion = config.get("reduced_motion", false), notch = config.get("shape", "pill") == "notch",
+        lyricCoverColor = config.get("lyric_cover_color", false),
+        backgroundCoverColor = config.get("background_cover_color", false),
+        spectrumCoverColor = config.get("spectrum_cover_color", false),
         fontFamily = config.get("font_family", "Microsoft YaHei UI").take(100).ifBlank { "Dialog" },
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),

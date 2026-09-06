@@ -12,8 +12,7 @@ import kotlin.math.roundToInt
 /** Owns only window lifecycle, placement and presentation animation. Must live on the EDT. */
 class IslandWindow(private val timeline: PlaybackTimeline, private val store: SettingsStore,
                    actions: PlaybackActions, private val report: (Throwable) -> Unit,
-                   private val spectrum: () -> FloatArray = { FloatArray(4) },
-                   private val spectrumStatus: () -> String = { "无音频输入" }) : AutoCloseable {
+                   private val spectrum: () -> FloatArray = { FloatArray(4) }) : AutoCloseable {
     private val window = JWindow().apply {
         name = "Dynamic Lyrics Island for SPW"
         type = Window.Type.UTILITY; isAlwaysOnTop = true
@@ -21,6 +20,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         background = Color(0, 0, 0, 0)
     }
     private val panel = IslandPanel(actions)
+    private val surface = IslandSurface(panel)
     private val native = WindowsOverlay()
     private val menu = IslandMenu(store, report)
     private var settings = store.read()
@@ -36,6 +36,11 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var previousSnapshot: PlaybackSnapshot? = null
     private var width = 280.0
     private var height = 58.0
+    private var expansion = 0.0
+    private var hoverWidth = 0
+
+    private var canvasWidth = 0
+    private var canvasHeight = 0
     private var anchor: Point? = null
     private var press: Point? = null
     private var dragOrigin: Point? = null
@@ -44,20 +49,20 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
 
     init {
         check(SwingUtilities.isEventDispatchThread())
-        window.contentPane = panel
+        window.contentPane = surface
         window.setSize(width.toInt(), height.toInt())
         panel.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (SwingUtilities.isLeftMouseButton(e) && !settings.clickThrough) {
-                    press = e.locationOnScreen; dragOrigin = Point(window.x + window.width / 2, window.y)
+                    press = e.locationOnScreen; dragOrigin = Point(window.x + panel.x + panel.width / 2, window.y + panel.y)
                 }
             }
             override fun mouseReleased(e: MouseEvent) {
                 if (e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (dragging) {
                     val screen = window.graphicsConfiguration.device.iDstring
-                    try { store.savePosition(screen, window.x + window.width / 2, window.y) } catch (error: Exception) { report(error) }
+                    try { store.savePosition(screen, window.x + panel.x + panel.width / 2, window.y + panel.y) } catch (error: Exception) { report(error) }
                 }
                 dragging = false; press = null; dragOrigin = null; anchor = null
             }
@@ -86,7 +91,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         tick()
     }
     fun about() = menu.about()
-    fun showSettings() = menu.settings()
+
     private fun tick() {
         if (closed) return
         val now = System.nanoTime()
@@ -95,7 +100,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         val snap = timeline.snapshot()
         panel.settings = settings; panel.snapshot = snap
         panel.updateSpectrum(if (snap.playing) spectrum() else FloatArray(4), dt)
-        panel.toolTipText = spectrumStatus()
+
         val devices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
         val draggedScreen = anchor?.let { a -> devices.find { it.defaultConfiguration.bounds.contains(a) } }
         val device = draggedScreen ?: devices.find { it.iDstring == settings.screen } ?:
@@ -105,7 +110,9 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         val top = IslandGeometry.top(screen, settings.notch, anchor?.y,
             settings.top?.takeIf { settings.screen == device.iDstring })
         val mouse = MouseInfo.getPointerInfo()?.location
-        panel.expanded = !settings.clickThrough && (dragging || (window.isVisible && mouse != null && window.bounds.contains(mouse)))
+        val overIsland = mouse != null && IslandGeometry.silhouette(panel.width, panel.height, settings.notch)
+            .contains((mouse.x - window.x - panel.x).toDouble(), (mouse.y - window.y - panel.y).toDouble())
+        panel.expanded = !settings.clickThrough && (dragging || panel.progress.dragging || (window.isVisible && overIsland))
         if (snap.line != lastLine || snap.track != previousSnapshot?.track) {
             panel.outgoing = previousSnapshot?.takeIf { it.track == snap.track }
             panel.transition = 0.0; lastLine = snap.line
@@ -113,16 +120,27 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         previousSnapshot = snap
         panel.transition = (panel.transition + dt / .65).coerceAtMost(1.0)
         val desired = panel.desiredSize(screen.width)
+        if (panel.expanded) {
+            hoverWidth = maxOf(hoverWidth, width.roundToInt(), desired.width)
+            desired.width = hoverWidth.coerceAtMost(minOf(settings.maxWidth, screen.width))
+        } else hoverWidth = 0
         val factor = if (settings.reducedMotion) 1.0 else 1 - kotlin.math.exp(-dt * 15)
+        expansion += ((if (panel.expanded) 1.0 else 0.0) - expansion) * factor
+        panel.expansion = expansion
         width += (desired.width - width) * factor
         height += (desired.height - height) * factor
         if (abs(width - desired.width) < .5) width = desired.width.toDouble()
         if (abs(height - desired.height) < .5) height = desired.height.toDouble()
-        val bounds = IslandGeometry.clamp(screen, center, top, width.roundToInt(), height.roundToInt())
+        val islandBounds = IslandGeometry.clamp(screen, center, top, width.roundToInt(), height.roundToInt())
+        canvasWidth = maxOf(canvasWidth, settings.maxWidth, islandBounds.width)
+        canvasHeight = maxOf(canvasHeight, islandBounds.height, desired.height,
+            settings.fontSize * 4 + IslandTextBlock.EXPANDED_HEIGHT + 60)
+        val bounds = IslandGeometry.clamp(screen, center, top, canvasWidth, canvasHeight)
         val resized = window.width != bounds.width || window.height != bounds.height
         if (window.bounds != bounds) window.bounds = bounds
-        // Preserve per-pixel alpha at the corners; a native window shape is a hard-edged region.
         if (resized) window.validate()
+        surface.setSize(bounds.width, bounds.height)
+        panel.setBounds(islandBounds.x - bounds.x, islandBounds.y - bounds.y, islandBounds.width, islandBounds.height)
         panel.doLayout()
         if (nativeAvailable && now >= nextScreenCheck) {
             try { fullscreen = settings.hideFullscreen && native.foregroundIsFullscreen(window) }
@@ -144,7 +162,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             catch (error: Exception) { nativeAvailable = false; report(error) }
         }
         if (visible) {
-            if (resized) panel.paintImmediately(0, 0, panel.width, panel.height) else panel.repaint()
+            surface.repaint()
         }
         timer.delay = if (!visible) 200 else if (settings.reducedMotion || !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble()) 50 else 16
     }

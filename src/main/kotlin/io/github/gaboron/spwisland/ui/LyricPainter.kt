@@ -33,7 +33,7 @@ object LyricPainter {
             copy.clip(Rectangle2D.Float(x - font.size2D * .16f, baseline - layout.ascent - font.size2D * .3f,
                 available + font.size2D * .32f, layout.ascent + layout.descent + font.size2D * .6f))
             if (karaoke && words.isNotEmpty()) {
-                AmllWordPainter.draw(copy, shaped, text, words, position, origin, baseline, font.size2D, motion)
+                AmllWordPainter.draw(copy, shaped, text, words, position, origin, baseline, font.size2D, motion, color)
                 return
             }
             copy.color = color

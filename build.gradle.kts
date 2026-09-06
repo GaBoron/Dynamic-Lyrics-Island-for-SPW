@@ -10,12 +10,15 @@ java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
 val workshop = "com.github.Moriafly:spw-workshop-api:0.1.0-dev20"
 val projectUrl = providers.gradleProperty("projectUrl")
+val metadataSources by configurations.creating { isTransitive = false }
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
     compileOnly("org.pf4j:pf4j:3.12.0")
     implementation("net.java.dev.jna:jna:5.17.0")
     implementation("net.java.dev.jna:jna-platform:5.17.0")
+    implementation("net.jthink:jaudiotagger:3.0.1")
+    metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
     testImplementation(kotlin("stdlib"))
     testImplementation(workshop) { isTransitive = false }
     testImplementation("org.pf4j:pf4j:3.12.0")
@@ -84,7 +87,7 @@ tasks.register<Zip>("plugin") {
     into("classes") { from(tasks.jar.map { zipTree(it.archiveFile) }) }
     into("lib") { from(configurations.runtimeClasspath) }
     into("licenses") { from("licenses") }
-    into("source") { from(tasks.named("sourceArchive")) }
+    into("source") { from(tasks.named("sourceArchive")); from(metadataSources) }
     from("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md")
 }
 tasks.register<JavaExec>("preview") {

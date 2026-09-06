@@ -36,7 +36,8 @@ class HostSettingsTest {
         val saved = mapOf<String, Any>("enabled" to false, "translation" to false, "karaoke" to false,
             "hide_paused" to true, "hide_fullscreen" to false, "click_through" to true,
             "reduced_motion" to true, "shape" to "notch", "font_family" to "Malgun Gothic",
-            "font_size" to "28", "max_width" to "820", "opacity" to "80", "offset_ms" to "-150")
+            "font_size" to "28", "max_width" to "820", "opacity" to "80", "offset_ms" to "-150",
+            "lyric_cover_color" to true, "background_cover_color" to true, "spectrum_cover_color" to true)
         // Like SPW, the notification helper has stale values until reload is called.
         val incoming = MemoryConfig().apply { reloadValues = saved }
         manager.listeners.forEach { it.accept(incoming) }
@@ -47,6 +48,7 @@ class HostSettingsTest {
         assertTrue(value.reducedMotion); assertTrue(value.notch); assertEquals("Malgun Gothic", value.fontFamily)
         assertEquals(28, value.fontSize); assertEquals(820, value.maxWidth)
         assertEquals(80, value.opacity); assertEquals(-150, value.offsetMs)
+        assertTrue(value.lyricCoverColor); assertTrue(value.backgroundCoverColor); assertTrue(value.spectrumCoverColor)
         settings.set("enabled", true)
         assertEquals("28", incoming.values["font_size"])
         settings.close()
@@ -59,8 +61,23 @@ class HostSettingsTest {
         val settings = HostSettings(fake) {}
         settings.savePosition("display", 300, 0)
         assertFalse(settings.read().translation); assertEquals(34, settings.read().fontSize)
-        assertEquals(1, fake.reloadCount)
+        assertEquals(2, fake.reloadCount)
         settings.close()
+    }
+
+    @Test fun migratesLegacyNumbersForNativeTextFieldsWithoutLosingOtherKeys() {
+        val path = Path.of("build/test-configs/legacy.json")
+        java.nio.file.Files.createDirectories(path.parent)
+        java.nio.file.Files.writeString(path, "{}")
+        val fake = MemoryConfig(path).apply {
+            values.putAll(mapOf("font_size" to 30.7, "max_width" to 820, "opacity" to 80f,
+                "offset_ms" to -150, "enabled" to false, "center_x" to 540))
+        }
+        HostSettings(fake) {}.use { settings ->
+            assertEquals("31", fake.values["font_size"]); assertEquals("820", fake.values["max_width"])
+            assertEquals("80", fake.values["opacity"]); assertEquals("-150", fake.values["offset_ms"])
+            assertFalse(settings.read().enabled); assertEquals(540, settings.read().centerX)
+        }
     }
 }
 

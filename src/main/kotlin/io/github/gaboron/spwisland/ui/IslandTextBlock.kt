@@ -23,7 +23,9 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
         val motionPad = if (settings.karaoke && line?.timedWords?.isNotEmpty() == true) settings.fontSize * .32f else 0f
         val needed = ceil(maxOf(shapedMain.width + motionPad, shapedSub?.width ?: 0f) + INSET * 2).toInt()
         val limit = maxWidth.coerceAtLeast(1)
-        return Dimension(needed.coerceIn(minOf(if (expanded) 340 else 240, limit), limit),
+        val minimum = if (expanded) PlaybackProgress.FIXED_WIDTH + EXPANDED_SIDE_SPACE * 2 else 240
+        val width = maxOf(needed, minimum) + if (expanded) EXPANDED_SIDE_PADDING * 2 else 0
+        return Dimension(width.coerceAtMost(limit),
             preferredHeight + if (expanded) EXPANDED_HEIGHT else 0)
     }
     fun mainBaseline(lyricAreaHeight: Float): Float = (lyricAreaHeight - height) / 2 - shapedMain.top
@@ -31,6 +33,8 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
 
     companion object {
         const val INSET = 54f
-        const val EXPANDED_HEIGHT = 65
+        const val EXPANDED_HEIGHT = 98
+        const val EXPANDED_SIDE_SPACE = 32
+        const val EXPANDED_SIDE_PADDING = 12
     }
 }

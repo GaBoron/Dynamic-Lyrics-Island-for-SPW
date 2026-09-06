@@ -7,6 +7,19 @@ import java.awt.geom.RoundRectangle2D
 import java.awt.Shape
 
 object IslandGeometry {
+    fun contentInset(width: Int, height: Int, notch: Boolean, top: Int, bottom: Int): Float {
+        val shape = silhouette(width, height, notch)
+        var inset = 0
+        for (y in top.coerceAtLeast(1)..bottom.coerceAtMost(height - 2)) {
+            var left = 0; var right = width / 2
+            while (left < right) {
+                val middle = (left + right) / 2
+                if (shape.contains(middle.toDouble(), y.toDouble())) right = middle else left = middle + 1
+            }
+            inset = maxOf(inset, left)
+        }
+        return inset + 4f
+    }
     fun top(screen: Rectangle, notch: Boolean, dragged: Int?, saved: Int?): Int {
         val proposed = dragged ?: saved ?: screen.y
         return if (notch || kotlin.math.abs(proposed.toLong() - screen.y) <= 12) screen.y else proposed
