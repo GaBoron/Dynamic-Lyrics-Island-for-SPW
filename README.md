@@ -1,71 +1,109 @@
 # Dynamic Lyrics Island for SPW
 
-让 [Salt Player for Windows（SPW）](https://github.com/Moriafly/spw-workshop-api) 的歌词显示在桌面顶部的灵动词岛中。支持胶囊与刘海外观、逐字高亮、翻译和悬停播放控制。
+> 把 SPW 的歌词变成桌面顶部的灵动词岛。
 
-**灵动词岛原创：Lyricify / WXRIW（XY Wang）。** 本项目基于其 [CC BY-SA 4.0 创作](https://github.com/WXRIW/Lyricify-App#lyricify-原创)独立实现 SPW 插件，非 Lyricify 官方产品，也不包含 Lyricify 程序或词库。
+[![Release](https://img.shields.io/github/v/release/GaBoron/Dynamic-Lyrics-Island-for-SPW?label=Release)](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4?logo=windows)](#系统要求)
+[![License](https://img.shields.io/badge/License-GPL--3.0%20%2B%20AGPL--3.0-blue)](#许可与致谢)
 
-## 安装与开始使用
+胶囊／刘海外观、逐字高亮、翻译、实时频谱、专辑封面，以及悬停播放控制——全部在 SPW 插件设置中调整。
 
-需要 Windows 10/11，以及兼容 **SPW Workshop API 0.1.0-dev20** 的 SPW 版本。真实进程频谱需要 Windows **20348 或更高版本**（包括 Windows 11）和共享模式音频输出；较旧系统仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用 Windows 自带的 .NET Framework 4.x。
+| 歌词 | 外观 | 交互 |
+| --- | --- | --- |
+| 逐字动画与翻译 | 胶囊／顶部刘海 | 播放、暂停与进度跳转 |
+| 日韩字体回退 | 频谱／专辑封面 | 拖动、吸附与鼠标穿透 |
+| 长歌词平滑滚动 | 封面取色 | 全屏自动隐藏 |
 
-1. 获取构建产物 `dynamic-lyrics-island-for-spw-0.2.0.zip`，或按[开发说明](docs/development.md)自行构建。
-2. 在 SPW 的创意工坊／插件管理中导入 ZIP，启用 **Dynamic Lyrics Island for SPW**。若当前 SPW 没有导入入口，可在退出 SPW 后将 ZIP 放进 `%APPDATA%\Salt Player for Windows\workshop\plugins\`，再启动 SPW。
-3. 播放一首带歌词的歌曲。若在播放过程中才启用插件，请切换一次歌曲，让 SPW 重新发送歌词和曲目信息。
-4. 在 SPW 插件配置中直接调整显示、外观、字体、字号、最大／固定宽度、左侧频谱或封面、翻译和封面取色。更改保存后立即生效；数值项输入整数，旧版设置自动保留。
+## 🚀 安装
 
-源代码位于 [GitHub 仓库](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW)，也可以从插件设置的“项目源代码（GitHub）”打开。
+1. 从 [Releases](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest) 下载 `dynamic-lyrics-island-for-spw-*.zip`。
+2. 在 SPW 的创意工坊／插件管理中导入 ZIP，并启用 **Dynamic Lyrics Island for SPW**。
+3. 播放一首带歌词的歌曲；若在播放中途启用插件，请切换一次歌曲。
 
-构建方式、模块边界与宿主运行限制见[开发说明](docs/development.md)。
+如果当前 SPW 没有导入入口：退出 SPW，将 ZIP 放入 `%APPDATA%\Salt Player for Windows\workshop\plugins\`，再重新启动 SPW。
 
-## 怎么操作
+```mermaid
+flowchart LR
+    A[下载插件 ZIP] --> B[导入并启用]
+    B --> C[播放带歌词歌曲]
+    C --> D[在插件设置中定制词岛]
+```
+
+### 系统要求
+
+- Windows 10 / 11
+- 兼容 **SPW Workshop API 0.1.0-dev20** 的 SPW 版本
+- 实时频谱需要 Windows build 20348 或更高版本，以及共享模式音频输出
+
+旧版 Windows 仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用系统自带的 .NET Framework 4.x。
+
+## 🖱️ 常用操作
 
 | 操作 | 效果 |
 | --- | --- |
-| 鼠标悬停词岛 | 展开歌曲信息、播放按钮与可点击／拖动的进度条 |
-| 双击词岛文字区域 | 播放／暂停 |
-| 拖动词岛空白或文字区域 | 调整位置，松开后保存；靠近顶边自动吸附，刘海模式始终贴住顶部 |
-| 右击词岛 | 显示、翻译、高亮、穿透、全屏隐藏、外观和位置选项 |
-| SPW 内按 `Ctrl+Shift+D` | 显示／隐藏词岛（不是全局快捷键） |
-| 托盘右键菜单 | 显示／隐藏、解锁、重置位置、查看署名与许可 |
-| SPW 插件设置 → 找回词岛 | 显示词岛、关闭鼠标穿透、回到主屏幕顶部 |
+| 悬停词岛 | 展开歌曲信息、播放按钮和进度条 |
+| 双击文字区域 | 播放／暂停 |
+| 点击或拖动进度条 | 跳转播放位置 |
+| 拖动词岛 | 调整并保存位置；靠近顶边自动吸附 |
+| 右击词岛 | 打开显示、外观、穿透和位置选项 |
+| 在 SPW 内按 `Ctrl+Shift+D` | 显示／隐藏词岛（非全局快捷键） |
+| 托盘右键 | 显示、解锁或重置位置 |
+| 插件设置 → 找回词岛 | 恢复显示、关闭穿透并移回主屏幕顶部 |
 
-开启鼠标穿透后，鼠标操作会传给词岛下面的窗口，不能再拖动或右击词岛；可从托盘或 SPW 设置解除。
+> [!TIP]
+> 开启鼠标穿透后，鼠标事件会传给下方窗口。需要调整词岛时，可从托盘菜单或 SPW 插件设置中解除穿透。
 
-## 歌词显示
+## ✨ 功能说明
 
-- **逐字歌词**：使用 SPW 提供的单词／音节时间戳，并在每秒进度通知之间平滑补间。暂停、缓冲和跳转会修正时序。
-- **普通逐行歌词**：整行显示，不伪造逐字时间。过长的行在限定宽度内平移。
-- **翻译**：SPW 当前行有翻译时显示第二行；缺少翻译时自动缩小。
-- **日韩文字**：在所选字体缺字时，自动使用系统已安装的日文、韩文字体回退；测量与绘制使用相同布局。
-- **间奏或无歌词**：上一句结束或收到空歌词时，继续显示上一句，直到下一句到来。歌曲开头尚无上一句时显示歌名；切歌、停止或跳转会清理旧句。
-- **动画**：移植 [AMLL](https://github.com/amll-dev/applemusic-like-lyrics) 的逐字抬升、长音逐字符缩放和辉光，加入渐变高亮、换行弹性过渡与窗口伸缩，支持“减少动画”。这是针对单行词岛的 Java2D 适配；SPW 不提供完整歌词列表，因此不含 AMLL 的多行滚动、背景人声或注音排版。
-- **左侧信息**：可在设置中选择实时频谱或专辑封面。频谱来自 SPW 进程的 Windows WASAPI 音频回环，四条分别反映 40–250 Hz、250–1000 Hz、1–4 kHz、4–16 kHz 的实际能量；封面来自本地音频标签或同目录图片，没有封面时显示唱片占位图。
-- **全屏隐藏**：Windows 前台全屏窗口位于词岛所在屏幕时自动隐藏；桌面和任务栏除外。
+- **歌词动画**：逐字歌词按 SPW 时间戳平滑高亮；普通逐行歌词保持整行显示，长歌词自动平移。
+- **AMLL 动效**：支持逐字抬升、长音强调、辉光和弹性过渡，也可开启“减少动画”。
+- **翻译与字体**：当前行有翻译时显示第二行；所选字体缺字时自动回退到系统日韩字体。
+- **频谱与封面**：左侧可显示 SPW 进程的四频段实时能量，或本地音频内嵌／同目录 `cover`、`folder` 图片。
+- **封面取色**：可分别应用到歌词高亮、背景和频谱；颜色会自动调整明暗以保持可读性。
+- **桌面适配**：支持顶部吸附、多屏找回、全屏隐藏和暂停隐藏。
 
-默认位置贴住主屏幕顶部。全部设置直接在 SPW 插件配置页调整，字号、最大宽度、不透明度和高亮偏移输入整数；开启“固定词岛宽度”后，词岛始终使用最大宽度设定。右键和托盘保留常用开关及找回操作，托盘菜单使用支持中文字体回退的 Swing 菜单。
+插件只接收 SPW 已加载的歌词，不搜索、不上传，也不修改歌曲或歌词文件。SPW 当前仅提供正在播放的歌词行，因此无法预告下一句或显示完整歌词列表。
 
-**封面取色**：歌词高亮与辉光、背景、频谱分别设有开关，默认关闭。从本地音频内嵌封面取色；没有可读内嵌封面时尝试同目录的 `cover.jpg`、`cover.png`、`folder.jpg`、`folder.png`。颜色会调整明暗以保持可读性，无封面时恢复默认配色。
+## 🛠️ 常见问题
 
-**进度控制**：悬停后点击或拖动进度条，松开鼠标时跳转；拖动中切歌会取消此次操作。时长从本地音频读取，无法读取时显示 `--:--` 并禁用拖动，播放按钮仍可用。
+<details>
+<summary><strong>没有歌词或歌名</strong></summary>
 
-插件只接收 SPW 已加载的歌词，不搜索、不上传、不修改歌曲或歌词文件，可与其他歌词来源插件共用。
+先确认 SPW 自己能够显示歌词，再切换一次歌曲。歌名来自歌词加载回调；若其他插件提前返回歌词，SPW 是否继续通知本插件取决于宿主调用顺序。
+</details>
 
-## 常见问题
+<details>
+<summary><strong>看不到封面</strong></summary>
 
-**没有歌词或歌名**：先确认 SPW 自己能显示歌词，再切换歌曲。SPW API 只通知当前歌词行，没有完整歌词列表或专用曲目切换事件；歌名来自加载歌词回调。如果其他插件提前返回歌词，SPW 是否继续通知本插件取决于宿主的调用顺序，可能只能显示歌词。
+插件只读本地音频内嵌封面，并回退到同目录的 `cover.jpg`、`cover.png`、`folder.jpg` 或 `folder.png`。网络歌曲或不可读文件会显示唱片占位图。
+</details>
 
-**看不到下一句或封面图片**：SPW 当前接口未提供下一句或封面数据。本插件不能预告下一句；选择左侧“专辑封面”后，会只读提取本地音频内嵌封面，并回退到同目录 `cover`／`folder` 图片。网络歌曲或不可读文件显示唱片占位图。
+<details>
+<summary><strong>高亮偏早或偏晚</strong></summary>
 
-**高亮偏早或偏晚**：在插件设置调整“逐字高亮偏移”；正值使高亮提前，负值使高亮延后。此设置仅作用于已收到的当前行，不能提前取得下一句。歌词行切换仍由 SPW 决定。
+在插件设置中调整“逐字高亮偏移”：正值使高亮提前，负值使高亮延后。歌词换行时机仍由 SPW 决定。
+</details>
 
-**频谱不动**：先确认正在播放且未静音。进程回环不支持旧于 Windows 20348 的系统，独占／ASIO 输出也可能无法捕获。可将 SPW 输出改为共享模式。采集不可用时保留静止的零电平频谱，不用假动画替代。
+<details>
+<summary><strong>频谱不动</strong></summary>
 
-**词岛消失**：检查“显示词岛”“暂停时隐藏”“全屏时隐藏”。动态壁纸可能被系统识别为前台全屏窗口，可关闭全屏隐藏。多屏位置异常时使用“找回词岛”。
+确认歌曲正在播放且未静音。进程回环不支持低于 Windows build 20348 的系统，独占／ASIO 输出也可能无法捕获；请尝试共享模式输出。
+</details>
 
-**停用插件**：在 SPW 插件管理中停用，会释放词岛窗口、刷新计时器、托盘图标、快捷键、配置监听、元数据读取任务与音频采集进程。
+<details>
+<summary><strong>词岛消失</strong></summary>
 
-## 许可
+检查“显示词岛”“暂停时隐藏”和“全屏时隐藏”。动态壁纸可能被识别为全屏窗口；多屏位置异常时使用“找回词岛”。
+</details>
 
-视觉及交互改编、文档按 **CC BY-SA 4.0** 提供，保留 **Lyricify / WXRIW（XY Wang）** 署名。AMLL 动画移植模块按 **AGPL-3.0-only** 提供，其他程序保留 **GPL-3.0-only**；依据两者第 13 条组合分发，并保留 AMLL contributors 的署名与改动说明。SPW API 与改编的构建示例保持 Apache-2.0 声明，JNA 选择其 Apache-2.0 许可。
+## 📚 开发与构建
 
-详见 [NOTICE](NOTICE)、[第三方许可说明](THIRD_PARTY_NOTICES.md)和 [LICENSE](LICENSE)。插件 ZIP 包含许可文件与对应完整源码，转发时请一并保留。
+构建方式、模块边界和宿主运行限制见 [开发说明](docs/development.md)。
+
+## 📄 许可与致谢
+
+**灵动词岛原创：Lyricify / WXRIW（XY Wang）。** 本项目依据 [CC BY-SA 4.0](https://github.com/WXRIW/Lyricify-App#lyricify-原创)独立实现，不是 Lyricify 官方产品，也不包含 Lyricify 程序或词库。
+
+AMLL 动画移植模块采用 **AGPL-3.0-only**，其他程序采用 **GPL-3.0-only**；视觉、交互改编及文档采用 **CC BY-SA 4.0**。SPW API 与改编构建示例保留 Apache-2.0 声明，JNA 采用其 Apache-2.0 许可。
+
+详见 [NOTICE](NOTICE)、[第三方许可说明](THIRD_PARTY_NOTICES.md)和 [LICENSE](LICENSE)。插件包包含许可文件与对应完整源码，转发时请一并保留。
