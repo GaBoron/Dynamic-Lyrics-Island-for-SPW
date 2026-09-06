@@ -62,6 +62,11 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
+        fixedWidth = config.get("fixed_width", false),
+        leadingContent = when (config.get("leading_content", "spectrum")) {
+            "cover" -> LeadingContent.COVER
+            else -> LeadingContent.SPECTRUM
+        },
         fontFamily = config.get("font_family", "Microsoft YaHei UI").take(100).ifBlank { "Dialog" },
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),

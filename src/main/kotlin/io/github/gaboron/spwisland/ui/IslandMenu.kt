@@ -9,6 +9,7 @@ import javax.swing.*
 /** Recovery controls remain available in SPW settings even if the tray is unavailable. */
 class IslandMenu(private val store: SettingsStore, private val report: (Throwable) -> Unit) : AutoCloseable {
     private var tray: TrayIcon? = null
+    private val trayPopup = SwingTrayPopup(::trayMenu)
     private fun action(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
     fun popup(owner: Component, x: Int, y: Int) {
         val menu = JPopupMenu()
@@ -43,20 +44,16 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             for (i in 0..3) g.fillRoundRect(7 + i * 5, 10 + (i % 2) * 3, 3, 12 - (i % 2) * 6, 2, 2)
             g.dispose()
         }
-        val menu = PopupMenu()
-        fun item(label: String, block: () -> Unit) { menu.add(MenuItem(label).apply {
-            addActionListener { SwingUtilities.invokeLater { action(block) } }
-        }) }
-
-        item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
-        item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
-        item("重置位置") { store.resetPosition() }
-        menu.addSeparator()
-        item("关于与许可") { about() }
-        item("项目源代码（GitHub）") { ProjectLinks.openSource() }
-        val created = TrayIcon(icon, "Dynamic Lyrics Island for SPW", menu).apply {
+        val created = TrayIcon(icon, "Dynamic Lyrics Island for SPW").apply {
             isImageAutoSize = true
             addActionListener { SwingUtilities.invokeLater { action { store.set("enabled", !store.read().enabled) } } }
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mousePressed(event: java.awt.event.MouseEvent) = showPopup(event)
+                override fun mouseReleased(event: java.awt.event.MouseEvent) = showPopup(event)
+                private fun showPopup(event: java.awt.event.MouseEvent) {
+                    if (event.isPopupTrigger) SwingUtilities.invokeLater { trayPopup.show(event.locationOnScreen) }
+                }
+            })
         }
         SystemTray.getSystemTray().add(created)
         tray = created
@@ -78,8 +75,17 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             "完整许可、第三方声明及对应源码随插件 ZIP 提供。",
             "关于与许可", JOptionPane.INFORMATION_MESSAGE)
     }
+    private fun trayMenu() = JPopupMenu().apply {
+        fun item(label: String, block: () -> Unit) { add(JMenuItem(label).apply { addActionListener { action(block) } }) }
+        item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
+        item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
+        item("重置位置") { store.resetPosition() }
+        addSeparator()
+        item("关于与许可") { about() }
+        item("项目源代码（GitHub）") { ProjectLinks.openSource() }
+    }
     override fun close() {
-
+        trayPopup.close()
         tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null
     }
 }

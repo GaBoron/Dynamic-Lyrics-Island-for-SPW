@@ -2,6 +2,7 @@
 package io.github.gaboron.spwisland.platform
 
 import io.github.gaboron.spwisland.core.TrackMetadata
+import io.github.gaboron.spwisland.core.CoverArtwork
 import org.jaudiotagger.audio.AudioFileIO
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -28,8 +29,11 @@ object LocalTrackMetadata {
             if (!image.isFile || image.length() > 16 * 1024 * 1024) null
             else runCatching { image.inputStream().use { decode(it) } }.getOrNull()
         }.firstOrNull()
-        return TrackMetadata(duration, cover?.let(::dominantColor))
+        return TrackMetadata(duration, cover?.let(::dominantColor), cover?.let(::artwork))
     }
+
+    private fun artwork(image: BufferedImage) = CoverArtwork(image.width, image.height,
+        image.getRGB(0, 0, image.width, image.height, null, 0, image.width))
 
     private fun decode(input: java.io.InputStream): BufferedImage? = MemoryCacheImageInputStream(input).use { stream ->
         val readers = ImageIO.getImageReaders(stream)

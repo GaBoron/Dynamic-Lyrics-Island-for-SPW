@@ -84,6 +84,28 @@
           "max": 1200
         },
         {
+          "type": "switch",
+          "key": "fixed_width",
+          "title": "固定词岛宽度",
+          "default_value": false,
+          "summary": "开启后始终使用“最大宽度”的值，不再随歌词长度收缩。"
+        },
+        {
+          "type": "list",
+          "key": "leading_content",
+          "title": "左侧信息",
+          "entries": [
+            "实时频谱",
+            "专辑封面"
+          ],
+          "entry_values": [
+            "spectrum",
+            "cover"
+          ],
+          "default_value": "spectrum",
+          "summary": "封面来自本地音频内嵌图片或同目录 cover/folder 图片。"
+        },
+        {
           "type": "seekbar",
           "key": "opacity",
           "title": "背景不透明度 %",

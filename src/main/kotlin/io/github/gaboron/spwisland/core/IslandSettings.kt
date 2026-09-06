@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.gaboron.spwisland.core
 
+enum class LeadingContent { SPECTRUM, COVER }
+
 data class IslandSettings(
     val enabled: Boolean = true,
     val translation: Boolean = true,
@@ -13,6 +15,8 @@ data class IslandSettings(
     val lyricCoverColor: Boolean = false,
     val backgroundCoverColor: Boolean = false,
     val spectrumCoverColor: Boolean = false,
+    val fixedWidth: Boolean = false,
+    val leadingContent: LeadingContent = LeadingContent.SPECTRUM,
     val fontFamily: String = "Microsoft YaHei UI",
     val fontSize: Int = 22,
     val maxWidth: Int = 640,

@@ -79,7 +79,9 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val animation = if (settings.reducedMotion) 1.0 else transition
             val sidePadding = (IslandTextBlock.EXPANDED_SIDE_PADDING * reveal).toFloat()
             val textInset = IslandTextBlock.INSET + sidePadding
-            drawIndicator(g, (textInset - 24).toInt(), (lyricAreaHeight / 2).toInt())
+            IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
+                bands, (textInset - 24).toInt(), (lyricAreaHeight / 2).toInt(),
+                IslandPalette.from(settings, snapshot.metadata.coverRgb).spectrum)
             IslandLyricsPainter.draw(g, snapshot, outgoing, settings, width, lyricAreaHeight, animation, textInset)
             drawStatus(g, (lyricAreaHeight / 2).toInt(), (width - textInset + 24).toInt())
             if (expanded && reveal > .95) {
@@ -90,13 +92,6 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
                     block.mainFont.deriveFont(12f), false, Color(147, 156, 174))
             }
         } finally { g.dispose() }
-    }
-    private fun drawIndicator(g: Graphics2D, x: Int, centerY: Int) {
-        g.color = IslandPalette.from(settings, snapshot.metadata.coverRgb).spectrum
-        for (i in bands.indices) {
-            val barHeight = 2 + (bands[i] * 24).toInt()
-            g.fillRoundRect(x - 11 + i * 6, centerY - barHeight / 2, 3, barHeight, 3, 3)
-        }
     }
     private fun drawStatus(g: Graphics2D, centerY: Int, centerX: Int) {
         if (snapshot.line == null && snapshot.playing) {

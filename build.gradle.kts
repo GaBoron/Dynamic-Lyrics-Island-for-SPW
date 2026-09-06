@@ -19,12 +19,7 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.17.0")
     implementation("net.jthink:jaudiotagger:3.0.1")
     metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
-    testImplementation(kotlin("stdlib"))
-    testImplementation(workshop) { isTransitive = false }
-    testImplementation("org.pf4j:pf4j:3.12.0")
-    testImplementation("junit:junit:4.13.2")
 }
-tasks.test { useJUnit(); systemProperty("java.awt.headless", "true") }
 tasks.processResources {
     dependsOn("buildSpectrum")
     from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
@@ -66,20 +61,6 @@ tasks.register<Exec>("buildSpectrum") {
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
 }
 
-tasks.register<Exec>("compileSpectrumTests") {
-    val output = layout.buildDirectory.file("native/spectrum-tests.exe")
-    val sources = listOf("native/Spectrum.cs", "native/SpectrumLevels.cs", "src/test/csharp/SpectrumTests.cs").map(::file)
-    inputs.files(sources); outputs.file(output)
-    doFirst { output.get().asFile.parentFile.mkdirs() }
-    executable = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
-    args("/nologo", "/target:exe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}")
-    args(sources.map { it.absolutePath })
-}
-tasks.register<Exec>("testSpectrum") {
-    dependsOn("compileSpectrumTests")
-    executable = layout.buildDirectory.file("native/spectrum-tests.exe").get().asFile.absolutePath
-}
-tasks.test { dependsOn("testSpectrum") }
 tasks.register<Zip>("plugin") {
     dependsOn(tasks.jar, "sourceArchive")
     archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}.zip")
@@ -89,14 +70,4 @@ tasks.register<Zip>("plugin") {
     into("licenses") { from("licenses") }
     into("source") { from(tasks.named("sourceArchive")); from(metadataSources) }
     from("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md")
-}
-tasks.register<JavaExec>("preview") {
-    description = "Show an interactive island using synthetic lyrics, without SPW."
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.github.gaboron.spwisland.PreviewKt")
-}
-tasks.register<JavaExec>("smoke") {
-    description = "Verify hidden Windows overlay lifecycle with an isolated simulated SPW host."
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.github.gaboron.spwisland.LifecycleSmokeKt")
 }

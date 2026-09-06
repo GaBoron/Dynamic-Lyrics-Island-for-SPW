@@ -24,7 +24,8 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
         val needed = ceil(maxOf(shapedMain.width + motionPad, shapedSub?.width ?: 0f) + INSET * 2).toInt()
         val limit = maxWidth.coerceAtLeast(1)
         val minimum = if (expanded) PlaybackProgress.FIXED_WIDTH + EXPANDED_SIDE_SPACE * 2 else 240
-        val width = maxOf(needed, minimum) + if (expanded) EXPANDED_SIDE_PADDING * 2 else 0
+        val natural = maxOf(needed, minimum) + if (expanded) EXPANDED_SIDE_PADDING * 2 else 0
+        val width = if (settings.fixedWidth) limit else natural
         return Dimension(width.coerceAtMost(limit),
             preferredHeight + if (expanded) EXPANDED_HEIGHT else 0)
     }
