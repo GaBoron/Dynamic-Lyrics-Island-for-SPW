@@ -146,13 +146,6 @@
         },
         {
           "type": "switch",
-          "key": "dynamic_background",
-          "title": "动态流光背景",
-          "default_value": false,
-          "summary": "使用封面主色生成随播放流动的渐变背景；“减少动画”会保留静态渐变。"
-        },
-        {
-          "type": "switch",
           "key": "spectrum_cover_color",
           "title": "频谱使用封面颜色",
           "default_value": false,

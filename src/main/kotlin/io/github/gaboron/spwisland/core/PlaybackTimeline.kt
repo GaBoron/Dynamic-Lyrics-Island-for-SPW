@@ -3,6 +3,10 @@ package io.github.gaboron.spwisland.core
 
 /** Serializes host callbacks and interpolates the host's one-second clock on a monotonic clock. */
 class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
+    companion object {
+        private const val SEEK_ACK_WINDOW_NS = 2_500_000_000L
+        private const val SEEK_ACK_TOLERANCE_MS = 2_000L
+    }
     private var track: Track? = null
     private var line: LyricLine? = null
     private var position = 0L
@@ -11,6 +15,8 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
     private var status = PlaybackStatus.IDLE
     private var metadata = TrackMetadata()
     private var generation = 0L
+    private var pendingSeek: Long? = null
+    private var pendingSeekDeadline = 0L
 
     @Synchronized fun trackChanged(value: Track): Long {
         if (track != value) {
@@ -20,6 +26,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             line = null
             position = 0
             anchor = nanoTime()
+            pendingSeek = null
         }
         return generation
     }
@@ -31,11 +38,21 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
         if (value != null && value.text.isNotBlank()) line = value
     }
     @Synchronized fun positionChanged(value: Long) {
-        position = value.coerceAtLeast(0)
-        anchor = nanoTime()
+        val now = nanoTime()
+        val next = value.coerceAtLeast(0)
+        pendingSeek?.let { target ->
+            // SPW can deliver one last pre-seek clock update before acknowledging the new position.
+            if (now < pendingSeekDeadline && kotlin.math.abs(next - target) > SEEK_ACK_TOLERANCE_MS) return
+            pendingSeek = null
+        }
+        position = next
+        anchor = now
     }
     @Synchronized fun seek(value: Long) {
-        positionChanged(value)
+        position = value.coerceAtLeast(0)
+        anchor = nanoTime()
+        pendingSeek = position
+        pendingSeekDeadline = anchor + SEEK_ACK_WINDOW_NS
         // Await the host's replacement line; do not retain text from before a seek.
         line = null
     }
@@ -51,6 +68,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
         if (value == PlaybackStatus.IDLE || value == PlaybackStatus.ENDED) {
             playing = false
             line = null
+            pendingSeek = null
             if (value == PlaybackStatus.IDLE) { track = null; position = 0; metadata = TrackMetadata(); generation++ }
         }
     }

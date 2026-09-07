@@ -63,7 +63,6 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         cornerRoundness = number("corner_roundness", 60, 0, 100),
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
-        dynamicBackground = config.get("dynamic_background", false),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
         fixedWidth = config.get("fixed_width", false),
         leadingContent = when (config.get("leading_content", "spectrum")) {

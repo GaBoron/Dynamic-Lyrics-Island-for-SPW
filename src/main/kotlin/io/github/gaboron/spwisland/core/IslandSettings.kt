@@ -15,7 +15,6 @@ data class IslandSettings(
     val cornerRoundness: Int = 60,
     val lyricCoverColor: Boolean = false,
     val backgroundCoverColor: Boolean = false,
-    val dynamicBackground: Boolean = false,
     val spectrumCoverColor: Boolean = false,
     val fixedWidth: Boolean = false,
     val leadingContent: LeadingContent = LeadingContent.SPECTRUM,
