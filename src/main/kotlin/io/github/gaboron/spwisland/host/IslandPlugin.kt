@@ -14,6 +14,7 @@ class IslandPlugin(context: PluginContext) : SpwPlugin(context) {
         }
     }
     override fun stop() { val old = runtime; runtime = null; old?.close() }
+    override fun update() = stop()
     override fun delete() = stop()
 
     companion object {
