@@ -12,17 +12,28 @@ import java.awt.Window
 
 /** Windows-only capabilities. All access is from the Swing event thread. */
 class WindowsOverlay {
+    companion object { private const val ERROR_INVALID_WINDOW_HANDLE = 1400 }
     private val user32 = if (Platform.isWindows()) User32.INSTANCE else null
     private fun handle(window: Window) = HWND(Native.getWindowPointer(window))
+    private fun existingHandle(window: Window, api: User32): HWND? {
+        val pointer = Native.getWindowPointer(window) ?: return null
+        if (Pointer.nativeValue(pointer) == 0L) return null
+        val hwnd = HWND(pointer)
+        return hwnd.takeIf { api.IsWindow(it) }
+    }
 
     fun reinforceTopmost(window: Window) {
         val api = user32 ?: return
         if (!window.isDisplayable || !window.isVisible) return
+        val hwnd = existingHandle(window, api) ?: return
         // Reassert the top of the topmost band without moving, resizing or taking keyboard focus.
         val flags = 0x0001 or 0x0002 or 0x0010 or 0x0200 // NOSIZE | NOMOVE | NOACTIVATE | NOOWNERZORDER
-        check(api.SetWindowPos(handle(window), HWND(Pointer.createConstant(-1)), 0, 0, 0, 0, flags)) {
-            "无法维持词岛置顶：${Native.getLastError()}"
-        }
+        Native.setLastError(0)
+        if (api.SetWindowPos(hwnd, HWND(Pointer.createConstant(-1)), 0, 0, 0, 0, flags)) return
+        val error = Native.getLastError()
+        // AWT may replace a native peer around a visibility transition. Reacquire it on the next tick.
+        if (error == ERROR_INVALID_WINDOW_HANDLE) return
+        error("无法维持词岛置顶：$error")
     }
 
     fun clickThrough(window: Window, enabled: Boolean) {
