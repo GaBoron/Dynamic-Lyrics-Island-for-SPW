@@ -59,6 +59,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         karaoke = config.get("karaoke", true), hidePaused = config.get("hide_paused", false),
         hideFullscreen = config.get("hide_fullscreen", true), clickThrough = config.get("click_through", false),
         reducedMotion = config.get("reduced_motion", false), notch = config.get("shape", "pill") == "notch",
+        cornerRadius = number("corner_radius", 24, 0, 64),
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
