@@ -69,8 +69,9 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
             val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRoundness)
-            val background = IslandPalette.from(settings, snapshot.metadata.coverRgb).background
-            g.color = Color(background.red, background.green, background.blue, settings.opacity * 255 / 100); g.fill(shape)
+            val palette = IslandPalette.from(settings, snapshot.metadata.coverRgb)
+            IslandBackgroundPainter.draw(g, shape, palette.background, snapshot.metadata.coverRgb, settings.opacity,
+                settings.dynamicBackground, snapshot.positionMs, settings.reducedMotion)
             g.color = Color(255, 255, 255, 19); g.draw(shape)
             g.clip(shape)
             val block = IslandTextBlock(snapshot, settings)
@@ -81,7 +82,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val textInset = IslandTextBlock.INSET + sidePadding
             IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
                 bands, (textInset - 24).toInt(), (lyricAreaHeight / 2).toInt(),
-                IslandPalette.from(settings, snapshot.metadata.coverRgb).spectrum)
+                palette.spectrum)
             IslandLyricsPainter.draw(g, snapshot, outgoing, settings, width, lyricAreaHeight, animation, textInset)
             drawStatus(g, (lyricAreaHeight / 2).toInt(), (width - textInset + 24).toInt())
             if (expanded && reveal > .95) {

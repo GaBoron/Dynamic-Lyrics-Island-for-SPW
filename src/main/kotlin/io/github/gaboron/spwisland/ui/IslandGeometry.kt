@@ -8,7 +8,7 @@ import java.awt.Shape
 
 object IslandGeometry {
     fun contentInset(width: Int, height: Int, notch: Boolean, top: Int, bottom: Int,
-                     cornerRoundness: Int = 100): Float {
+                     cornerRoundness: Int = 60): Float {
         val shape = silhouette(width, height, notch, cornerRoundness)
         var inset = 0
         for (y in top.coerceAtLeast(1)..bottom.coerceAtMost(height - 2)) {
@@ -32,7 +32,7 @@ object IslandGeometry {
         val y = top.toLong().coerceIn(screen.y.toLong(), screen.y.toLong() + screen.height - h)
         return Rectangle(x.toInt(), y.toInt(), w, h)
     }
-    fun silhouette(width: Int, height: Int, notch: Boolean, cornerRoundness: Int = 100): Shape {
+    fun silhouette(width: Int, height: Int, notch: Boolean, cornerRoundness: Int = 60): Shape {
         val w = width.toDouble(); val h = height.toDouble()
         val scale = cornerRoundness.coerceIn(0, 100) / 100.0
         val pillRadius = minOf(w, h) / 2 * scale

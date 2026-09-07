@@ -64,10 +64,10 @@
           "type": "seekbar",
           "key": "corner_roundness",
           "title": "圆角大小 %",
-          "default_value": 100,
+          "default_value": 60,
           "min": 0,
           "max": 100,
-          "summary": "0 为直角，100 为默认最大圆角；圆角会随词岛高度自动缩放。"
+          "summary": "0 为直角，100 为最大圆角；圆角会随词岛高度自动缩放。"
         },
         {
           "type": "edittext",
@@ -143,6 +143,13 @@
           "title": "背景使用封面颜色",
           "default_value": false,
           "summary": "从本地音频内嵌封面或同目录 cover/folder 图片取色，无封面时使用默认颜色。"
+        },
+        {
+          "type": "switch",
+          "key": "dynamic_background",
+          "title": "动态流光背景",
+          "default_value": false,
+          "summary": "使用封面主色生成随播放流动的渐变背景；“减少动画”会保留静态渐变。"
         },
         {
           "type": "switch",

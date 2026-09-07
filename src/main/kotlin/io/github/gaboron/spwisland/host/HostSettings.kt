@@ -30,7 +30,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         if (loaded) changed()
     }
     init {
-        migrateNumericText()
+        migrateSettings()
         accepted = decode()
         manager.addConfigChangeListener("island.json", listener)
         // SPW can fail to register its watcher when a plugin's data directory does not yet exist.
@@ -41,7 +41,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     }
 
     override fun read(): IslandSettings = synchronized(lock) { accepted ?: decode() }
-    private fun migrateNumericText() {
+    private fun migrateSettings() {
         // Native sliders use numbers; migrate the previous text fields.
         if (!Files.exists(config.getConfigPath()) || !config.reload()) return
         var migrated = false
@@ -52,6 +52,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
                 migrated = true
             }
         }
+        migrated = snapCornerRoundness() || migrated
         if (migrated) check(config.save()) { "词岛旧设置迁移失败，请检查 SPW 配置目录权限。" }
     }
     private fun decode(): IslandSettings = IslandSettings(
@@ -59,9 +60,10 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         karaoke = config.get("karaoke", true), hidePaused = config.get("hide_paused", false),
         hideFullscreen = config.get("hide_fullscreen", true), clickThrough = config.get("click_through", false),
         reducedMotion = config.get("reduced_motion", false), notch = config.get("shape", "pill") == "notch",
-        cornerRoundness = number("corner_roundness", 100, 0, 100),
+        cornerRoundness = number("corner_roundness", 60, 0, 100),
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
+        dynamicBackground = config.get("dynamic_background", false),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
         fixedWidth = config.get("fixed_width", false),
         leadingContent = when (config.get("leading_content", "spectrum")) {
@@ -82,8 +84,10 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             if (bytes.isEmpty() || fingerprint?.contentEquals(bytes) == true) return
             // Failed/partial writes must not replace the last usable snapshot with defaults.
             if (!config.reload()) return
+            val normalized = snapCornerRoundness()
+            if (normalized && !config.save()) return
             val value = decode()
-            fingerprint = bytes
+            fingerprint = if (normalized) Files.readAllBytes(config.getConfigPath()) else bytes
             (value != accepted).also { accepted = value }
         }
         if (notify) changed()
@@ -93,6 +97,14 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         val text = config.get<Any>(key, "") as? String
         val value = text?.trim()?.toDoubleOrNull() ?: (config.get<Any>(key, default) as? Number)?.toDouble()
         return value?.takeIf { it.isFinite() }?.coerceIn(min.toDouble(), max.toDouble())?.roundToInt() ?: default
+    }
+    private fun snapCornerRoundness(): Boolean {
+        val raw = config.get<Any>("corner_roundness", 60)
+        val value = (raw as? Number)?.toDouble() ?: (raw as? String)?.trim()?.toDoubleOrNull() ?: return false
+        val rounded = value.takeIf { it.isFinite() }?.coerceIn(0.0, 100.0)?.roundToInt() ?: 60
+        if (raw is Number && raw.toDouble() == rounded.toDouble()) return false
+        config.set("corner_roundness", rounded)
+        return true
     }
     override fun set(key: String, value: Any) = update { it.set(key, value) }
     override fun savePosition(screen: String, centerX: Int, top: Int) = update {

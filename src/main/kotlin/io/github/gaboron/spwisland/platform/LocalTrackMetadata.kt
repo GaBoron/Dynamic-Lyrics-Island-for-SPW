@@ -4,7 +4,6 @@ package io.github.gaboron.spwisland.platform
 import io.github.gaboron.spwisland.core.TrackMetadata
 import io.github.gaboron.spwisland.core.CoverArtwork
 import org.jaudiotagger.audio.AudioFileIO
-import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -29,7 +28,7 @@ object LocalTrackMetadata {
             if (!image.isFile || image.length() > 16 * 1024 * 1024) null
             else runCatching { image.inputStream().use { decode(it) } }.getOrNull()
         }.firstOrNull()
-        return TrackMetadata(duration, cover?.let(::dominantColor), cover?.let(::artwork))
+        return TrackMetadata(duration, cover?.let(CoverColorExtractor::dominant), cover?.let(::artwork))
     }
 
     private fun artwork(image: BufferedImage) = CoverArtwork(image.width, image.height,
@@ -47,19 +46,5 @@ object LocalTrackMetadata {
             val params = reader.defaultReadParam.apply { setSourceSubsampling(step, step, 0, 0) }
             reader.read(0, params)
         } finally { reader.dispose() }
-    }
-
-    /** Quantized dominant hue avoids averaging complementary cover colors into gray. */
-    internal fun dominantColor(image: BufferedImage): Int? {
-        val counts = IntArray(4096)
-        for (y in 0 until image.height) for (x in 0 until image.width) {
-            val c = Color(image.getRGB(x, y), true)
-            if (c.alpha < 128) continue
-            val key = (c.red shr 4 shl 8) or (c.green shr 4 shl 4) or (c.blue shr 4)
-            counts[key]++
-        }
-        val key = counts.indices.maxByOrNull { counts[it] } ?: return null
-        if (counts[key] == 0) return null
-        return Color((key shr 8) * 16 + 8, ((key shr 4) and 15) * 16 + 8, (key and 15) * 16 + 8).rgb
     }
 }

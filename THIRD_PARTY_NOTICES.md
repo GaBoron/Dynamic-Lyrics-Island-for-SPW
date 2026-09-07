@@ -9,11 +9,13 @@
 
 新增程序代码采用 [GPL-3.0-only](LICENSE)。Creative Commons 将 GPLv3 列为 [CC BY-SA 4.0 的单向兼容许可](https://creativecommons.org/compatible-licenses/)，因此代码贡献采用 GPLv3 不会替换原始创作的 CC BY-SA 许可。视觉设计及本文等文档按 CC BY-SA 4.0 提供。完整文本见 [CC-BY-SA-4.0.txt](licenses/CC-BY-SA-4.0.txt)。
 
-## AMLL 歌词动画
+## AMLL 歌词动画与动态背景参考
 
 [Apple Music-like Lyrics](https://github.com/amll-dev/applemusic-like-lyrics)，AMLL contributors（包括 Steve-xmh），采用 [AGPL-3.0](licenses/AGPL-3.0.txt)。参考版本为 `58ccd3ffae7ec4e9a6d1cdb0dd88ac8c767f68a8`。
 
 2026-09-04 将其 `packages/core/src/lyric-player/dom/lyric-line.ts` 中的逐字抬升、长音强调曲线、持续时间缩放和末词增强移植到 `AmllMotion.kt`，改用 Kotlin 按播放时间采样，并接入 Java2D 字形绘制与单行换行动画。未嵌入 AMLL 的 DOM、WebGL 或第三方弹簧实现。
+
+动态流光背景参考 AMLL 公开文档中的封面驱动、独立背景层和播放／暂停同步思路，以 Java2D 多层径向渐变独立实现；未复制 AMLL 的 canvas、着色器或渲染器源码。
 
 该移植模块保持 **AGPL-3.0-only**，其他原有程序文件保留 **GPL-3.0-only**。依据 GPLv3 与 AGPLv3 的第 13 条组合分发，同时保留两份许可和完整对应源码；这不改变 Lyricify 原创的 CC BY-SA 4.0 许可。详见 [NOTICE](NOTICE) 中的来源、改动日期及组合说明。
 
