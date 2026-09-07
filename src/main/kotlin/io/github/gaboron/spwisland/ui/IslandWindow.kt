@@ -111,7 +111,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             settings.top?.takeIf { settings.screen == device.iDstring })
         val mouse = MouseInfo.getPointerInfo()?.location
         val overIsland = mouse != null && IslandGeometry.silhouette(panel.width, panel.height, settings.notch,
-            settings.cornerRadius)
+            settings.cornerRoundness)
             .contains((mouse.x - window.x - panel.x).toDouble(), (mouse.y - window.y - panel.y).toDouble())
         panel.expanded = !settings.clickThrough && (dragging || panel.progress.dragging || (window.isVisible && overIsland))
         if (snap.line != lastLine || snap.track != previousSnapshot?.track) {

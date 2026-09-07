@@ -18,7 +18,7 @@ class IslandSurface(val island: IslandPanel) : JPanel(null) {
     }
     fun inputRegion(): Shape {
         val shape = IslandGeometry.silhouette(island.width, island.height, island.settings.notch,
-            island.settings.cornerRadius)
+            island.settings.cornerRoundness)
         // The region includes the antialiased outer edge instead of clipping it to a hard pixel boundary.
         val padded = Area(shape).apply { add(Area(BasicStroke(2f).createStrokedShape(shape))) }
         return AffineTransform.getTranslateInstance(island.x.toDouble(), island.y.toDouble()).createTransformedShape(padded)

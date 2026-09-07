@@ -23,7 +23,7 @@ class IslandAlphaMask {
             mask = BufferedImage(capacityW, capacityH, BufferedImage.TYPE_INT_ARGB_PRE)
             key = null
         }
-        val next = listOf(panel.width, panel.height, panel.settings.notch, panel.settings.cornerRadius, sx, sy)
+        val next = listOf(panel.width, panel.height, panel.settings.notch, panel.settings.cornerRoundness, sx, sy)
         if (key != next) {
             mask!!.createGraphics().let { g ->
                 g.composite = AlphaComposite.Clear; g.fillRect(0, 0, capacityW, capacityH)
@@ -31,7 +31,7 @@ class IslandAlphaMask {
                 g.scale(sx, sy)
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                 g.fill(IslandGeometry.silhouette(panel.width, panel.height, panel.settings.notch,
-                    panel.settings.cornerRadius))
+                    panel.settings.cornerRoundness))
                 g.dispose()
             }
             key = next

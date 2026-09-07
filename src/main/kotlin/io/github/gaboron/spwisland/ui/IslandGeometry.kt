@@ -8,8 +8,8 @@ import java.awt.Shape
 
 object IslandGeometry {
     fun contentInset(width: Int, height: Int, notch: Boolean, top: Int, bottom: Int,
-                     cornerRadius: Int = 24): Float {
-        val shape = silhouette(width, height, notch, cornerRadius)
+                     cornerRoundness: Int = 100): Float {
+        val shape = silhouette(width, height, notch, cornerRoundness)
         var inset = 0
         for (y in top.coerceAtLeast(1)..bottom.coerceAtMost(height - 2)) {
             var left = 0; var right = width / 2
@@ -32,13 +32,15 @@ object IslandGeometry {
         val y = top.toLong().coerceIn(screen.y.toLong(), screen.y.toLong() + screen.height - h)
         return Rectangle(x.toInt(), y.toInt(), w, h)
     }
-    fun silhouette(width: Int, height: Int, notch: Boolean, cornerRadius: Int = 24): Shape {
+    fun silhouette(width: Int, height: Int, notch: Boolean, cornerRoundness: Int = 100): Shape {
         val w = width.toDouble(); val h = height.toDouble()
-        val pillRadius = cornerRadius.toDouble().coerceIn(0.0, minOf(w, h) / 2)
+        val scale = cornerRoundness.coerceIn(0, 100) / 100.0
+        val pillRadius = minOf(w, h) / 2 * scale
         if (!notch) return RoundRectangle2D.Double(0.0, 0.0, w - 1, h - 1,
             pillRadius * 2, pillRadius * 2)
+        val defaultNotchRadius = (h * 0.45).coerceAtMost(32.0)
         val notchRadiusLimit = minOf((w - 20).coerceAtLeast(0.0) / 2, (h - 14).coerceAtLeast(0.0))
-        val r = cornerRadius.toDouble().coerceIn(0.0, notchRadiusLimit)
+        val r = minOf(defaultNotchRadius, notchRadiusLimit) * scale
         return Path2D.Double().apply {
             moveTo(0.0, 0.0); lineTo(w, 0.0)
             curveTo(w - 10, 0.0, w - 10, 8.0, w - 10, 14.0)

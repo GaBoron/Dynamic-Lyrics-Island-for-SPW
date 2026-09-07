@@ -68,7 +68,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-            val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRadius)
+            val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRoundness)
             val background = IslandPalette.from(settings, snapshot.metadata.coverRgb).background
             g.color = Color(background.red, background.green, background.blue, settings.opacity * 255 / 100); g.fill(shape)
             g.color = Color(255, 255, 255, 19); g.draw(shape)

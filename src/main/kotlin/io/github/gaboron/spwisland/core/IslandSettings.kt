@@ -12,7 +12,7 @@ data class IslandSettings(
     val clickThrough: Boolean = false,
     val reducedMotion: Boolean = false,
     val notch: Boolean = false,
-    val cornerRadius: Int = 24,
+    val cornerRoundness: Int = 100,
     val lyricCoverColor: Boolean = false,
     val backgroundCoverColor: Boolean = false,
     val spectrumCoverColor: Boolean = false,

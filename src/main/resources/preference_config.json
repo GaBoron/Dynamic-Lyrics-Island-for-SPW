@@ -62,12 +62,12 @@
         },
         {
           "type": "seekbar",
-          "key": "corner_radius",
-          "title": "圆角大小",
-          "default_value": 24,
+          "key": "corner_roundness",
+          "title": "圆角大小 %",
+          "default_value": 100,
           "min": 0,
-          "max": 64,
-          "summary": "0 为直角；数值越大越圆，实际圆角会自动适应词岛高度。"
+          "max": 100,
+          "summary": "0 为直角，100 为默认最大圆角；圆角会随词岛高度自动缩放。"
         },
         {
           "type": "edittext",
