@@ -29,8 +29,8 @@ class PlaybackProgress(private val seek: (Long) -> Unit) : JComponent() {
                 if (e.button != MouseEvent.BUTTON1 || !dragging) return
                 val target = positionAt(e.x)
                 val valid = gestureTrack == snapshot.track && isEnabled
-                preview = null; gestureTrack = null
                 if (valid) seek(target)
+                preview = null; gestureTrack = null
                 repaint()
             }
         }

@@ -19,7 +19,14 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     var expansion: Double? = null
     var transition = 1.0
     var outgoing: PlaybackSnapshot? = null
-    val progress = PlaybackProgress(actions::seek).also { add(it) }
+    val progress = PlaybackProgress(::seekPlayback).also { add(it) }
+    private fun seekPlayback(positionMs: Long) {
+        actions.seek(positionMs)
+        // Publish the committed position before the gesture preview is removed.
+        // Layout may run before the next timer tick, so update the panel snapshot too.
+        snapshot = snapshot.copy(positionMs = positionMs)
+        progress.update(snapshot)
+    }
     private val bands = FloatArray(4)
     fun updateSpectrum(levels: FloatArray, dt: Double) {
         for (i in bands.indices) {
