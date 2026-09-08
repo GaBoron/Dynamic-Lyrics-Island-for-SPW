@@ -15,6 +15,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     var settings = IslandSettings()
     var snapshot = PlaybackSnapshot(null, null, 0, false, PlaybackStatus.IDLE)
     var expanded = false
+    var expandUpward = false
     var expansion: Double? = null
     var transition = 1.0
     var outgoing: PlaybackSnapshot? = null
@@ -43,16 +44,19 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     fun desiredSize(availableWidth: Int): Dimension {
         return IslandTextBlock(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), expanded)
     }
+    fun collapsedHeight(availableWidth: Int): Int =
+        IslandTextBlock(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), false).height
     override fun doLayout() {
         progress.update(snapshot)
         val controlsVisible = expanded && (expansion ?: 1.0) > .95
         progress.isVisible = controlsVisible
-        progress.setBounds((width - PlaybackProgress.FIXED_WIDTH) / 2, height - 38, PlaybackProgress.FIXED_WIDTH, 28)
+        progress.setBounds((width - PlaybackProgress.FIXED_WIDTH) / 2,
+            if (expandUpward) 10 else height - 38, PlaybackProgress.FIXED_WIDTH, 28)
         progress.foreground = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric
         val buttons = listOf(previous, play, next)
         buttons.forEachIndexed { index, button ->
             button.isVisible = controlsVisible
-            button.setBounds(width / 2 - 81 + index * 56, height - 72, 50, 30)
+            button.setBounds(width / 2 - 81 + index * 56, if (expandUpward) 42 else height - 72, 50, 30)
         }
         play.icon = if (snapshot.playing) PlaybackIcon.PAUSE else PlaybackIcon.PLAY
         play.toolTipText = if (snapshot.playing) "暂停" else "播放"
@@ -78,18 +82,25 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val block = IslandTextBlock(snapshot, settings)
             val reveal = expansion ?: if (expanded) 1.0 else 0.0
             val lyricAreaHeight = (height - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
+            val lyricAreaTop = if (expandUpward) height - lyricAreaHeight else 0f
             val animation = if (settings.reducedMotion) 1.0 else transition
             val sidePadding = (IslandTextBlock.EXPANDED_SIDE_PADDING * reveal).toFloat()
             val textInset = IslandTextBlock.INSET + sidePadding
             IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
-                bands, (textInset - 24).toInt(), (lyricAreaHeight / 2).toInt(),
+                bands, (textInset - 24).toInt(), (lyricAreaTop + lyricAreaHeight / 2).toInt(),
                 palette.spectrum)
-            IslandLyricsPainter.draw(g, snapshot, outgoing, settings, width, lyricAreaHeight, animation, textInset)
-            drawStatus(g, (lyricAreaHeight / 2).toInt(), (width - textInset + 24).toInt())
+            val lyrics = g.create() as Graphics2D
+            try {
+                lyrics.translate(0.0, lyricAreaTop.toDouble())
+                IslandLyricsPainter.draw(lyrics, snapshot, outgoing, settings, width,
+                    lyricAreaHeight, animation, textInset)
+            } finally { lyrics.dispose() }
+            drawStatus(g, (lyricAreaTop + lyricAreaHeight / 2).toInt(), (width - textInset + 24).toInt())
             if (expanded && reveal > .95) {
                 val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist).filter { it.isNotBlank() }.joinToString(" · ")
                     .ifBlank { "在 SPW 中播放音乐" }
-                LyricPainter.draw(g, label, emptyList(), 0, 42f + sidePadding, height - 81f,
+                LyricPainter.draw(g, label, emptyList(), 0, 42f + sidePadding,
+                    if (expandUpward) 81f else height - 81f,
                     width - 84f - sidePadding * 2,
                     block.mainFont.deriveFont(12f), false, Color(147, 156, 174))
             }

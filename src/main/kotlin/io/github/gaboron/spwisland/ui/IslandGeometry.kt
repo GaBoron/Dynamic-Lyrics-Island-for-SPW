@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.gaboron.spwisland.ui
 
-import java.awt.Rectangle
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
 import java.awt.Shape
@@ -20,17 +19,6 @@ object IslandGeometry {
             inset = maxOf(inset, left)
         }
         return inset + 4f
-    }
-    fun top(screen: Rectangle, notch: Boolean, dragged: Int?, saved: Int?): Int {
-        val proposed = dragged ?: saved ?: screen.y
-        return if (notch || kotlin.math.abs(proposed.toLong() - screen.y) <= 12) screen.y else proposed
-    }
-    fun clamp(screen: Rectangle, centerX: Int, top: Int, width: Int, height: Int): Rectangle {
-        val w = width.coerceIn(1, screen.width.coerceAtLeast(1))
-        val h = height.coerceIn(1, screen.height.coerceAtLeast(1))
-        val x = (centerX.toLong() - w / 2).coerceIn(screen.x.toLong(), screen.x.toLong() + screen.width - w)
-        val y = top.toLong().coerceIn(screen.y.toLong(), screen.y.toLong() + screen.height - h)
-        return Rectangle(x.toInt(), y.toInt(), w, h)
     }
     fun silhouette(width: Int, height: Int, notch: Boolean, cornerRoundness: Int = 60): Shape {
         val w = width.toDouble(); val h = height.toDouble()

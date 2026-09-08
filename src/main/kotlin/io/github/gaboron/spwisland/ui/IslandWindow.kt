@@ -45,6 +45,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var press: Point? = null
     private var dragOrigin: Point? = null
     private var dragging = false
+    private var placementAnchor = settings.verticalAnchor
     private val timer = Timer(16) { tick() }
 
     init {
@@ -62,7 +63,8 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
                 if (e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (dragging) {
                     val screen = window.graphicsConfiguration.device.iDstring
-                    try { store.savePosition(screen, window.x + panel.x + panel.width / 2, window.y + panel.y) } catch (error: Exception) { report(error) }
+                    try { store.savePosition(screen, window.x + panel.x + panel.width / 2,
+                        window.y + panel.y, placementAnchor) } catch (error: Exception) { report(error) }
                 }
                 dragging = false; press = null; dragOrigin = null; anchor = null
             }
@@ -105,10 +107,9 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         val draggedScreen = anchor?.let { a -> devices.find { it.defaultConfiguration.bounds.contains(a) } }
         val device = draggedScreen ?: devices.find { it.iDstring == settings.screen } ?:
             GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice
-        val screen = device.defaultConfiguration.bounds
+        val screen = IslandPlacement.workArea(device.defaultConfiguration)
         val center = anchor?.x ?: settings.centerX?.takeIf { settings.screen == device.iDstring } ?: (screen.x + screen.width / 2)
-        val top = IslandGeometry.top(screen, settings.notch, anchor?.y,
-            settings.top?.takeIf { settings.screen == device.iDstring })
+        val proposedTop = anchor?.y ?: settings.top?.takeIf { settings.screen == device.iDstring } ?: screen.y
         val mouse = MouseInfo.getPointerInfo()?.location
         val overIsland = mouse != null && IslandGeometry.silhouette(panel.width, panel.height, settings.notch,
             settings.cornerRoundness)
@@ -125,6 +126,12 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             hoverWidth = maxOf(hoverWidth, width.roundToInt(), desired.width)
             desired.width = hoverWidth.coerceAtMost(minOf(settings.maxWidth, screen.width))
         } else hoverWidth = 0
+        val collapsedHeight = panel.collapsedHeight(screen.width)
+        placementAnchor = if (anchor != null) {
+            IslandPlacement.snap(screen, proposedTop, collapsedHeight, settings.notch)
+        } else if (settings.notch) VerticalAnchor.TOP else settings.verticalAnchor.let {
+            if (it == VerticalAnchor.FREE) IslandPlacement.snap(screen, proposedTop, collapsedHeight, false) else it
+        }
         val factor = if (settings.reducedMotion) 1.0 else 1 - kotlin.math.exp(-dt * 15)
         expansion += ((if (panel.expanded) 1.0 else 0.0) - expansion) * factor
         panel.expansion = expansion
@@ -132,15 +139,17 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         height += (desired.height - height) * factor
         if (abs(width - desired.width) < .5) width = desired.width.toDouble()
         if (abs(height - desired.height) < .5) height = desired.height.toDouble()
-        val islandBounds = IslandGeometry.clamp(screen, center, top, width.roundToInt(), height.roundToInt())
+        val islandBounds = IslandPlacement.bounds(screen, center, proposedTop,
+            width.roundToInt(), height.roundToInt(), placementAnchor)
         canvasWidth = maxOf(canvasWidth, settings.maxWidth, islandBounds.width)
         canvasHeight = maxOf(canvasHeight, islandBounds.height, desired.height,
             settings.fontSize * 4 + IslandTextBlock.EXPANDED_HEIGHT + 60)
-        val bounds = IslandGeometry.clamp(screen, center, top, canvasWidth, canvasHeight)
+        val bounds = IslandPlacement.bounds(screen, center, proposedTop, canvasWidth, canvasHeight, placementAnchor)
         val resized = window.width != bounds.width || window.height != bounds.height
         if (window.bounds != bounds) window.bounds = bounds
         if (resized) window.validate()
         surface.setSize(bounds.width, bounds.height)
+        panel.expandUpward = placementAnchor == VerticalAnchor.BOTTOM
         panel.setBounds(islandBounds.x - bounds.x, islandBounds.y - bounds.y, islandBounds.width, islandBounds.height)
         panel.doLayout()
         if (nativeAvailable && now >= nextScreenCheck) {

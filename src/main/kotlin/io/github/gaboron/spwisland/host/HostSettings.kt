@@ -74,7 +74,12 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
         centerX = number("center_x", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },
-        top = number("top", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE }
+        top = number("top", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },
+        verticalAnchor = when (config.get("vertical_anchor", "free")) {
+            "top" -> VerticalAnchor.TOP
+            "bottom" -> VerticalAnchor.BOTTOM
+            else -> VerticalAnchor.FREE
+        }
     )
     internal fun refresh() {
         val notify = synchronized(lock) {
@@ -106,11 +111,13 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         return true
     }
     override fun set(key: String, value: Any) = update { it.set(key, value) }
-    override fun savePosition(screen: String, centerX: Int, top: Int) = update {
+    override fun savePosition(screen: String, centerX: Int, top: Int, verticalAnchor: VerticalAnchor) = update {
         it.set("screen", screen); it.set("center_x", centerX); it.set("top", top)
+        it.set("vertical_anchor", verticalAnchor.name.lowercase())
     }
     override fun resetPosition() = update {
         it.set("screen", ""); it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE)
+        it.set("vertical_anchor", "free")
     }
     private fun update(change: (ConfigHelper) -> Unit) {
         synchronized(lock) {
