@@ -21,6 +21,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         val config = store.read()
         toggle("显示词岛", "enabled", config.enabled)
         toggle("鼠标穿透（从 SPW 设置解锁）", "click_through", config.clickThrough)
+        toggle("鼠标经过时自动隐藏（需鼠标穿透）", "auto_hide_on_hover", config.autoHideOnHover)
         toggle("显示翻译", "translation", config.translation)
         toggle("逐字高亮", "karaoke", config.karaoke)
         toggle("全屏时隐藏", "hide_fullscreen", config.hideFullscreen)

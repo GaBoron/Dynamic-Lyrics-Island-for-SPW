@@ -21,6 +21,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     }
     private val panel = IslandPanel(actions)
     private val surface = IslandSurface(panel)
+    private val hoverVisibility = IslandHoverVisibility()
     private val native = WindowsOverlay()
     private val menu = IslandMenu(store, report)
     private var settings = store.read()
@@ -158,6 +159,13 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             nextScreenCheck = now + 400_000_000
         }
         val visible = settings.enabled && (!settings.hidePaused || snap.playing) && (!settings.hideFullscreen || !fullscreen)
+        val hoverRegion = java.awt.geom.AffineTransform.getTranslateInstance(
+            islandBounds.x.toDouble(), islandBounds.y.toDouble()
+        ).createTransformedShape(IslandGeometry.silhouette(panel.width, panel.height, settings.notch,
+            settings.cornerRoundness))
+        surface.revealAnchor = placementAnchor
+        surface.revealScale = hoverVisibility.update(
+            visible && settings.clickThrough && settings.autoHideOnHover, mouse, hoverRegion, dt, settings.reducedMotion)
         if (window.isVisible != visible) {
             window.isVisible = visible
             nextTopmostCheck = 0
@@ -174,7 +182,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (visible) {
             surface.repaint()
         }
-        timer.delay = if (!visible) 200 else if (settings.reducedMotion || !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble()) 50 else 16
+        timer.delay = if (!visible) 200 else if (hoverVisibility.animating) 16 else if (settings.reducedMotion || !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble()) 50 else 16
     }
     override fun close() {
         if (closed) return

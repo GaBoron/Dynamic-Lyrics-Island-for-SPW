@@ -4,11 +4,30 @@ package io.github.gaboron.spwisland.ui
 import java.awt.*
 import java.awt.geom.AffineTransform
 import java.awt.geom.Area
+import io.github.gaboron.spwisland.core.VerticalAnchor
 import javax.swing.JPanel
 
 /** Stable translucent backing surface; animation changes the child silhouette, not the native bitmap. */
 class IslandSurface(val island: IslandPanel) : JPanel(null) {
+    var revealScale = 1.0
+    var revealAnchor = VerticalAnchor.FREE
     init { isOpaque = false; isDoubleBuffered = false; island.isDoubleBuffered = false; add(island) }
+    override fun paintChildren(graphics: Graphics) {
+        if (revealScale <= 0.0) return
+        val g = graphics.create() as Graphics2D
+        try {
+            val pivotX = island.x + island.width / 2.0
+            val pivotY = island.y + when (revealAnchor) {
+                VerticalAnchor.TOP -> 0.0
+                VerticalAnchor.BOTTOM -> island.height.toDouble()
+                VerticalAnchor.FREE -> island.height / 2.0
+            }
+            g.translate(pivotX, pivotY)
+            g.scale(revealScale, revealScale)
+            g.translate(-pivotX, -pivotY)
+            super.paintChildren(g)
+        } finally { g.dispose() }
+    }
     override fun paintComponent(graphics: Graphics) {
         val g = graphics.create() as Graphics2D
         try {

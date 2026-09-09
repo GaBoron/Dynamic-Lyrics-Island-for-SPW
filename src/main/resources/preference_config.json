@@ -30,6 +30,13 @@
         },
         {
           "type": "switch",
+          "key": "auto_hide_on_hover",
+          "title": "鼠标经过时自动隐藏",
+          "default_value": false,
+          "summary": "仅在鼠标穿透开启时生效：鼠标进入词岛区域后缩小消失，移开后展开恢复。"
+        },
+        {
+          "type": "switch",
           "key": "hide_fullscreen",
           "title": "全屏时隐藏",
           "default_value": true
