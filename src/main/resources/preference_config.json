@@ -24,6 +24,13 @@
         },
         {
           "type": "switch",
+          "key": "experimental_multi_line",
+          "title": "实验性多行歌词",
+          "default_value": false,
+          "summary": "保留尚未结束的已播歌词，并尝试读取 SPW 内部完整歌词轴；发生重叠时自动展开显示。"
+        },
+        {
+          "type": "switch",
           "key": "click_through",
           "title": "鼠标穿透",
           "default_value": false

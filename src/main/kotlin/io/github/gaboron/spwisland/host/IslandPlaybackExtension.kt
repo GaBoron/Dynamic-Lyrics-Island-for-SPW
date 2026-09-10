@@ -22,7 +22,7 @@ class IslandPlaybackExtension : PlaybackExtensionPoint {
     override fun onPositionUpdated(position: Long) { IslandPlugin.active()?.timeline?.positionChanged(position) }
     override fun onSeekTo(position: Long) { IslandPlugin.active()?.timeline?.seek(position) }
     override fun onLyricsLineUpdated(lyricsLine: PlaybackExtensionPoint.LyricsLine?) {
-        IslandPlugin.active()?.timeline?.lineChanged(lyricsLine?.let { line ->
+        IslandPlugin.active()?.lineChanged(lyricsLine?.let { line ->
             LyricLine(line.startTime, line.endTime, line.pureMainText, line.pureSubText,
                 line.lyricsCells.map { Word(it.startTime, it.endTime, it.text) })
         })

@@ -49,10 +49,10 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
         addActionListener { clicked() }; this@IslandPanel.add(this)
     }
     fun desiredSize(availableWidth: Int): Dimension {
-        return IslandTextBlock(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), expanded)
+        return IslandLyricsLayout(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), expanded)
     }
     fun collapsedHeight(availableWidth: Int): Int =
-        IslandTextBlock(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), false).height
+        IslandLyricsLayout(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), false).height
     override fun doLayout() {
         progress.update(snapshot)
         val controlsVisible = expanded && (expansion ?: 1.0) > .95
@@ -114,7 +114,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
         } finally { g.dispose() }
     }
     private fun drawStatus(g: Graphics2D, centerY: Int, centerX: Int) {
-        if (snapshot.line == null && snapshot.playing) {
+        if (snapshot.line == null && snapshot.lyrics.isEmpty() && snapshot.playing) {
             for (i in 0..2) {
                 val a = if (settings.reducedMotion) 150 else (150 + 90 * sin(snapshot.positionMs / 350.0 - i)).toInt()
                 g.color = Color(190, 204, 221, a); g.fillOval(centerX - 8 + i * 7, centerY - 2, 4, 4)

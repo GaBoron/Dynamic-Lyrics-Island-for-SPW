@@ -31,6 +31,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         toggle("鼠标经过时自动隐藏（需鼠标穿透）", "auto_hide_on_hover", config.autoHideOnHover)
         toggle("显示翻译", "translation", config.translation)
         toggle("逐字高亮", "karaoke", config.karaoke)
+        toggle("实验性多行歌词", "experimental_multi_line", config.experimentalMultiLine)
         toggle("全屏时隐藏", "hide_fullscreen", config.hideFullscreen)
         toggle("暂停时隐藏", "hide_paused", config.hidePaused)
         toggle("减少动画", "reduced_motion", config.reducedMotion)

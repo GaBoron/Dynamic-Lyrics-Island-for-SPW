@@ -14,7 +14,16 @@ import javax.swing.SwingUtilities
 class IslandRuntime : AutoCloseable {
     val timeline = PlaybackTimeline()
     private val metadata = TrackMetadataLoader(timeline)
+    private val lyricsProbe = HostLyricsDocumentProbe()
     fun trackChanged(track: io.github.gaboron.spwisland.core.Track) = metadata.load(track)
+    fun lineChanged(line: io.github.gaboron.spwisland.core.LyricLine?) {
+        timeline.lineChanged(line)
+        if (settings.read().experimentalMultiLine && line != null) {
+            lyricsProbe.read()?.takeIf { document ->
+                document.any { it.startMs == line.startMs && it.text == line.text }
+            }?.let(timeline::lyricsChanged)
+        }
+    }
     private var window: IslandWindow? = null
     private val spectrum = ProcessSpectrum()
     @Volatile private var closed = false

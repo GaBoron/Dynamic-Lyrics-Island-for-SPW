@@ -10,16 +10,32 @@ object IslandLyricsPainter {
              width: Int, height: Float, transition: Double, inset: Float = IslandTextBlock.INSET) {
         val progress = if (transition >= 1) 1.0 else AmllMotion.line(transition * .65)
         val outgoingAlpha = (1 - transition * 3).coerceIn(0.0, 1.0).toFloat()
+        val currentRows = IslandLyricsLayout(current, settings).rows(height)
+        val previousRows = previous?.let { IslandLyricsLayout(it, settings).rows(height) }.orEmpty()
+        val currentLines = currentRows.map { it.block.line }
         if (previous != null && outgoingAlpha > 0) {
-            block(g, previous, settings, width, height, -settings.fontSize * progress,
-                outgoingAlpha, 1 - .04 * progress, inset)
+            previousRows.filter { it.block.line !in currentLines }.forEach { row ->
+                row(g, previous, settings, row, width, height, -settings.fontSize * progress,
+                    outgoingAlpha, 1 - .04 * progress, inset)
+            }
         }
-        block(g, current, settings, width, height, settings.fontSize * (1 - progress),
-            (transition * 3).coerceIn(0.0, 1.0).toFloat(), .96 + .04 * progress, inset)
+        currentRows.forEach { currentRow ->
+            val old = previousRows.firstOrNull { it.block.line == currentRow.block.line }
+            if (old != null) {
+                val placed = currentRow.copy(
+                    mainBaseline = lerp(old.mainBaseline, currentRow.mainBaseline, progress),
+                    subBaseline = lerp(old.subBaseline, currentRow.subBaseline, progress))
+                row(g, current, settings, placed, width, height, 0.0, 1f, 1.0, inset)
+            } else {
+                row(g, current, settings, currentRow, width, height, settings.fontSize * (1 - progress),
+                    (transition * 3).coerceIn(0.0, 1.0).toFloat(), .96 + .04 * progress, inset)
+            }
+        }
     }
-    private fun block(g: Graphics2D, snapshot: PlaybackSnapshot, settings: IslandSettings, width: Int,
-                      height: Float, offset: Double, alpha: Float, scale: Double, inset: Float) {
-        val block = IslandTextBlock(snapshot, settings)
+    private fun row(g: Graphics2D, snapshot: PlaybackSnapshot, settings: IslandSettings,
+                    row: IslandLyricsLayout.Row, width: Int, height: Float,
+                    offset: Double, alpha: Float, scale: Double, inset: Float) {
+        val block = row.block
         val line = block.line
         val time = snapshot.positionMs + settings.offsetMs
         val copy = g.create() as Graphics2D
@@ -31,10 +47,12 @@ object IslandLyricsPainter {
             val available = width - inset * 2
             LyricPainter.draw(copy, block.main, line?.timedWords.orEmpty(),
                 if (line?.timedWords?.isNotEmpty() == true) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
-                inset, block.mainBaseline(height), available, block.mainFont, settings.karaoke,
+                inset, row.mainBaseline, available, block.mainFont, settings.karaoke,
                 color = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric, motion = !settings.reducedMotion)
             block.sub?.let { LyricPainter.draw(copy, it, emptyList(), (time - (line?.startMs ?: 0)).coerceAtLeast(0),
-                inset, block.subBaseline(height), available, block.subFont, false, Color(177, 182, 195)) }
+                inset, row.subBaseline, available, block.subFont, false, Color(177, 182, 195)) }
         } finally { copy.dispose() }
     }
+    private fun lerp(from: Float, to: Float, progress: Double): Float =
+        (from + (to - from) * progress).toFloat()
 }

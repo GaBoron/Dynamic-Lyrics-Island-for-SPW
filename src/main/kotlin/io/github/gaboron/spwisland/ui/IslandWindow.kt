@@ -33,7 +33,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var nextTopmostCheck = 0L
     private var topmostAvailable = true
     private var lastFrame = System.nanoTime()
-    private var lastLine: LyricLine? = null
+    private var lastLines: List<LyricLine> = emptyList()
     private var previousSnapshot: PlaybackSnapshot? = null
     private var width = 280.0
     private var height = 58.0
@@ -116,9 +116,10 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             settings.cornerRoundness)
             .contains((mouse.x - window.x - panel.x).toDouble(), (mouse.y - window.y - panel.y).toDouble())
         panel.expanded = !settings.clickThrough && (dragging || panel.progress.dragging || (window.isVisible && overIsland))
-        if (snap.line != lastLine || snap.track != previousSnapshot?.track) {
+        val visibleLines = ActiveLyrics.select(snap, settings.experimentalMultiLine)
+        if (visibleLines != lastLines || snap.track != previousSnapshot?.track) {
             panel.outgoing = previousSnapshot?.takeIf { it.track == snap.track }
-            panel.transition = 0.0; lastLine = snap.line
+            panel.transition = 0.0; lastLines = visibleLines
         }
         previousSnapshot = snap
         panel.transition = (panel.transition + dt / .65).coerceAtMost(1.0)

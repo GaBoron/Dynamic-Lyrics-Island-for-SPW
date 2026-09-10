@@ -7,8 +7,9 @@ import java.awt.Font
 import kotlin.math.ceil
 
 /** One layout specification owns text selection, insets, measured width and vertical centering. */
-class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSettings) {
-    val line = snapshot.line
+class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSettings,
+                      selectedLine: LyricLine? = snapshot.line) {
+    val line = selectedLine
     val main = line?.text?.takeIf { it.isNotBlank() } ?: snapshot.track?.title?.takeIf { it.isNotBlank() } ?: "SPW"
     val mainFont = Font(settings.fontFamily, Font.PLAIN, settings.fontSize)
     val sub = line?.translation?.takeIf { settings.translation && it.isNotBlank() }

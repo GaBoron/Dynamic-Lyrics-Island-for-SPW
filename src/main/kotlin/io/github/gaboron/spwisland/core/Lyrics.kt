@@ -24,7 +24,8 @@ data class LyricLine(val startMs: Long, val endMs: Long, val text: String,
 enum class PlaybackStatus { IDLE, BUFFERING, READY, ENDED }
 data class PlaybackSnapshot(val track: Track?, val line: LyricLine?, val positionMs: Long,
                             val playing: Boolean, val status: PlaybackStatus,
-                            val metadata: TrackMetadata = TrackMetadata())
+                            val metadata: TrackMetadata = TrackMetadata(),
+                            val lyrics: List<LyricLine> = emptyList())
 
 class CoverArtwork(val width: Int, val height: Int, internal val argb: IntArray)
 data class TrackMetadata(val durationMs: Long = 0, val coverRgb: Int? = null,
