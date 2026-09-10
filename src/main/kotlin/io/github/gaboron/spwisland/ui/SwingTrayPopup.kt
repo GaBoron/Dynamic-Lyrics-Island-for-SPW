@@ -74,7 +74,7 @@ class SwingTrayPopup(private val createMenu: () -> JPopupMenu) : AutoCloseable {
         dismisser.disarm()
     }
 
-    internal fun displayFont(): Font = Font("Dialog", Font.PLAIN, 13)
+    internal fun displayFont(): Font = Windows11PopupStyle.font
 
     private fun applyFont(component: java.awt.Component, font: Font) {
         component.font = font

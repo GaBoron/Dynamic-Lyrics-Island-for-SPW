@@ -47,6 +47,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             override fun popupMenuCanceled(event: PopupMenuEvent) = dismissIslandMenu(menu)
         })
         visibleIslandMenu = menu
+        Windows11PopupStyle.apply(menu)
         menu.show(owner, x, y)
         SwingUtilities.getWindowAncestor(menu)?.let(islandDismisser::arm)
     }
@@ -103,7 +104,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         addSeparator()
         item("关于与许可") { about() }
         item("项目源代码（GitHub）") { ProjectLinks.openSource() }
-    }
+    }.also(Windows11PopupStyle::apply)
     override fun close() {
         visibleIslandMenu?.isVisible = false
         visibleIslandMenu = null
