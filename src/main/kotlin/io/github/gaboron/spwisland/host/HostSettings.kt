@@ -46,7 +46,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         if (!Files.exists(config.getConfigPath()) || !config.reload()) return
         var migrated = false
         for ((key, limits) in mapOf("font_size" to Triple(22, 14, 42), "max_width" to Triple(640, 280, 1200),
-            "opacity" to Triple(96, 0, 100), "offset_ms" to Triple(0, -2000, 2000))) {
+            "opacity" to Triple(96, 35, 100), "offset_ms" to Triple(0, -2000, 2000))) {
             if (config.get<Any>(key, "") is String) {
                 config.set(key, number(key, limits.first, limits.second, limits.third))
                 migrated = true
@@ -72,7 +72,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         },
         fontFamily = config.get("font_family", "Microsoft YaHei UI").take(100).ifBlank { "Dialog" },
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
-        opacity = number("opacity", 96, 0, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
+        opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
         centerX = number("center_x", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },
         top = number("top", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },

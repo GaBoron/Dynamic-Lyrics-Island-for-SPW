@@ -2,12 +2,22 @@
 package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.VerticalAnchor
+import java.awt.GraphicsConfiguration
 import java.awt.Rectangle
+import java.awt.Toolkit
 import kotlin.math.abs
 
 /** Pure placement policy for free, top-snapped and bottom-snapped island windows. */
 object IslandPlacement {
     private const val SNAP_DISTANCE = 12
+
+    fun workArea(configuration: GraphicsConfiguration): Rectangle {
+        val screen = configuration.bounds
+        val insets = Toolkit.getDefaultToolkit().getScreenInsets(configuration)
+        return Rectangle(screen.x + insets.left, screen.y + insets.top,
+            (screen.width - insets.left - insets.right).coerceAtLeast(1),
+            (screen.height - insets.top - insets.bottom).coerceAtLeast(1))
+    }
 
     fun snap(screen: Rectangle, proposedTop: Int, collapsedHeight: Int, notch: Boolean): VerticalAnchor {
         if (notch) return VerticalAnchor.TOP

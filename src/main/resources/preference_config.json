@@ -126,7 +126,7 @@
           "key": "opacity",
           "title": "背景不透明度 %",
           "default_value": 96,
-          "min": 0,
+          "min": 35,
           "max": 100
         },
         {
