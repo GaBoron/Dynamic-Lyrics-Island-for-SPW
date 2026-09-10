@@ -108,7 +108,8 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         val draggedScreen = anchor?.let { a -> devices.find { it.defaultConfiguration.bounds.contains(a) } }
         val device = draggedScreen ?: devices.find { it.iDstring == settings.screen } ?:
             GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice
-        val screen = IslandPlacement.workArea(device.defaultConfiguration)
+        // Full monitor bounds, so the island can be dragged onto, snap to and rest on the taskbar.
+        val screen = device.defaultConfiguration.bounds
         val center = anchor?.x ?: settings.centerX?.takeIf { settings.screen == device.iDstring } ?: (screen.x + screen.width / 2)
         val proposedTop = anchor?.y ?: settings.top?.takeIf { settings.screen == device.iDstring } ?: screen.y
         val mouse = MouseInfo.getPointerInfo()?.location
