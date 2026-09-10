@@ -34,6 +34,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         menu.add(JMenuItem("重置位置").apply { addActionListener { action { store.resetPosition() } } })
         menu.add(JMenuItem("关于与许可").apply { addActionListener { about() } })
         menu.add(JMenuItem("项目源代码（GitHub）").apply { addActionListener { action { ProjectLinks.openSource() } } })
+        Windows11PopupStyle.apply(menu)
         menu.show(owner, x, y)
     }
     fun installTray() {
@@ -84,7 +85,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         addSeparator()
         item("关于与许可") { about() }
         item("项目源代码（GitHub）") { ProjectLinks.openSource() }
-    }
+    }.also(Windows11PopupStyle::apply)
     override fun close() {
         trayPopup.close()
         tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null
