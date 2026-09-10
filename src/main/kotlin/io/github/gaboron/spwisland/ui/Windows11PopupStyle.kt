@@ -115,6 +115,7 @@ internal object Windows11PopupStyle {
     private class MenuItemUi : BasicMenuItemUI() {
         override fun installDefaults() {
             super.installDefaults()
+            checkIcon = null
             selectionForeground = text
             disabledForeground = muted
             acceleratorForeground = muted
