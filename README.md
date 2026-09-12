@@ -18,7 +18,7 @@
 
 1. 从 [Releases](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest) 下载 `dynamic-lyrics-island-for-spw-*.zip`。
 2. 在 SPW 的创意工坊／插件管理中导入 ZIP，并启用 **Dynamic Lyrics Island for SPW**。
-3. 播放一首带歌词的歌曲；若在播放中途启用插件，请切换一次歌曲。
+3. 播放一首带歌词的歌曲。
 
 如果当前 SPW 没有导入入口：退出 SPW，将 ZIP 放入 `%APPDATA%\Salt Player for Windows\workshop\plugins\`，再重新启动 SPW。
 
@@ -56,7 +56,8 @@ flowchart LR
 ## ✨ 功能说明
 
 - **歌词动画**：逐字歌词按 SPW 时间戳平滑高亮；普通逐行歌词保持整行显示，长歌词自动平移。
-- **AMLL 动效**：支持逐字抬升、长音强调、辉光和弹性过渡，也可开启“减少动画”。
+- **AMLL 动效**：支持逐字抬升、长音强调、辉光和弹性过渡；低配置设备可开启“低性能模式”。
+- **低性能模式**：使用约 15 FPS、仍遵循每个歌词单元时间的简化高亮和轻量模拟频谱，关闭过渡、辉光、音频捕获和可选歌词探测，并降低窗口状态检查频率。
 - **翻译与字体**：当前行有翻译时显示第二行；所选字体缺字时自动回退到系统日韩字体。
 - **频谱与封面**：左侧可显示 SPW 进程的四频段实时能量，或本地音频内嵌／同目录 `cover`、`folder` 图片。
 - **封面取色**：优先选择封面占比最大的彩色系并避开黑白，可分别应用到歌词高亮、背景和频谱。

@@ -57,8 +57,9 @@
         {
           "type": "switch",
           "key": "reduced_motion",
-          "title": "减少动画",
-          "default_value": false
+          "title": "低性能模式",
+          "default_value": false,
+          "summary": "降低刷新率，使用按单字时间推进的简化高亮和轻量模拟频谱，并关闭复杂动效与可选歌词探测。"
         },
         {
           "type": "list",

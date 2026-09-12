@@ -11,14 +11,14 @@ class IslandHoverVisibility {
     var animating = false
         private set
 
-    fun update(enabled: Boolean, mouse: Point?, region: Shape, dt: Double, reducedMotion: Boolean): Double {
+    fun update(enabled: Boolean, mouse: Point?, region: Shape, dt: Double, instant: Boolean): Double {
         if (!enabled) entryRegion = null
         else if (mouse != null) {
             if (entryRegion?.contains(mouse) == false) entryRegion = null
             if (entryRegion == null && region.contains(mouse)) entryRegion = region
         }
         val target = if (enabled && entryRegion != null) 0.0 else 1.0
-        progress = if (reducedMotion) target else if (target < progress) {
+        progress = if (instant) target else if (target < progress) {
             (progress - dt / .24).coerceAtLeast(target)
         } else {
             (progress + dt / .24).coerceAtMost(target)

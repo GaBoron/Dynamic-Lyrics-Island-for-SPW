@@ -100,9 +100,15 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         val now = System.nanoTime()
         val dt = ((now - lastFrame) / 1_000_000_000.0).coerceIn(0.0, .1)
         lastFrame = now
+        val performance = settings.performance
         val snap = timeline.snapshot()
         panel.settings = settings; panel.snapshot = snap
-        panel.updateSpectrum(if (snap.playing) spectrum() else FloatArray(4), dt)
+        val levels = if (!snap.playing || settings.leadingContent != LeadingContent.SPECTRUM) FloatArray(4)
+            else when (performance.spectrumMode) {
+                SpectrumMode.LIVE -> spectrum()
+                SpectrumMode.SYNTHETIC -> SyntheticSpectrum.levels(snap.positionMs)
+            }
+        panel.updateSpectrum(levels, dt)
 
         val devices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
         val draggedScreen = anchor?.let { a -> devices.find { it.defaultConfiguration.bounds.contains(a) } }
@@ -122,7 +128,9 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             panel.transition = 0.0; lastLines = visibleLines
         }
         previousSnapshot = snap
-        panel.transition = (panel.transition + dt / .65).coerceAtMost(1.0)
+        panel.transition = if (performance.animateLayout) {
+            (panel.transition + dt / .65).coerceAtMost(1.0)
+        } else 1.0
         val desired = panel.desiredSize(screen.width)
         if (panel.expanded) {
             hoverWidth = maxOf(hoverWidth, width.roundToInt(), desired.width)
@@ -134,7 +142,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         } else if (settings.notch) VerticalAnchor.TOP else settings.verticalAnchor.let {
             if (it == VerticalAnchor.FREE) IslandPlacement.snap(screen, proposedTop, collapsedHeight, false) else it
         }
-        val factor = if (settings.reducedMotion) 1.0 else 1 - kotlin.math.exp(-dt * 15)
+        val factor = if (performance.animateLayout) 1 - kotlin.math.exp(-dt * 15) else 1.0
         expansion += ((if (panel.expanded) 1.0 else 0.0) - expansion) * factor
         panel.expansion = expansion
         width += (desired.width - width) * factor
@@ -157,7 +165,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (nativeAvailable && now >= nextScreenCheck) {
             try { fullscreen = settings.hideFullscreen && native.foregroundIsFullscreen(window) }
             catch (error: Exception) { nativeAvailable = false; fullscreen = false; report(error) }
-            nextScreenCheck = now + 400_000_000
+            nextScreenCheck = now + performance.screenCheckIntervalNs
         }
         val visible = settings.enabled && (!settings.hidePaused || snap.playing) && (!settings.hideFullscreen || !fullscreen)
         val hoverRegion = java.awt.geom.AffineTransform.getTranslateInstance(
@@ -166,7 +174,8 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             settings.cornerRoundness))
         surface.revealAnchor = placementAnchor
         surface.revealScale = hoverVisibility.update(
-            visible && settings.clickThrough && settings.autoHideOnHover, mouse, hoverRegion, dt, settings.reducedMotion)
+            visible && settings.clickThrough && settings.autoHideOnHover, mouse, hoverRegion, dt,
+            !performance.animateLayout)
         if (window.isVisible != visible) {
             window.isVisible = visible
             nextTopmostCheck = 0
@@ -174,7 +183,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (visible && topmostAvailable && now >= nextTopmostCheck) {
             try { native.reinforceTopmost(window) }
             catch (error: Exception) { topmostAvailable = false; report(error) }
-            nextTopmostCheck = now + 100_000_000
+            nextTopmostCheck = now + performance.topmostCheckIntervalNs
         }
         if (nativeAvailable && clickThroughApplied != settings.clickThrough) {
             try { native.clickThrough(window, settings.clickThrough); clickThroughApplied = settings.clickThrough }
@@ -183,7 +192,13 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (visible) {
             surface.repaint()
         }
-        timer.delay = if (!visible) 200 else if (hoverVisibility.animating) 16 else if (settings.reducedMotion || !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble()) 50 else 16
+        timer.delay = when {
+            !visible -> 200
+            !performance.animateLayout -> performance.frameDelayMs
+            hoverVisibility.animating -> performance.frameDelayMs
+            !snap.playing && panel.transition >= 1 && width == desired.width.toDouble() && height == desired.height.toDouble() -> 50
+            else -> performance.frameDelayMs
+        }
     }
     override fun close() {
         if (closed) return

@@ -27,14 +27,9 @@ object AmllWordPainter {
                     copy.translate(origin.toDouble(), baseline.toDouble())
                     copy.translate(pose.xEm * fontSize + bounds.centerX, pose.yEm * fontSize + bounds.centerY)
                     copy.scale(pose.scale, pose.scale); copy.translate(-bounds.centerX, -bounds.centerY)
-                    if (pose.glow > .001) {
-                        for (radius in 3 downTo 1) {
-                            copy.color = Color(color.red, color.green, color.blue, (pose.glow * 55 / radius).toInt().coerceIn(0, 255))
-                            copy.stroke = BasicStroke(fontSize * .035f * radius, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-                            copy.draw(area)
-                        }
-                    }
-                    copy.paint = highlight(shaped, wordBounds, word.progress(time), fontSize, color)
+                    val progress = word.progress(time)
+                    LyricGlow.draw(copy, area, fontSize, color, pose.glow, progress >= 1.0)
+                    copy.paint = highlight(shaped, wordBounds, progress, fontSize, color)
                     copy.fill(area)
                 } finally { copy.dispose() }
             }

@@ -22,11 +22,11 @@
 
 全部设置由 `preference_config.json` 声明，SPW 原生渲染开关、外观列表、圆角滑杆和字体／数值输入。`HostSettings` 启动时将旧版数值配置转换为文本输入项使用的字符串，保留数值；右键和托盘使用同一存储。SPW 配置监听仅作为快速通知，另有 250 ms 文件同步；有效配置读入快照后再通知界面，空文件或解析失败不覆盖最后一次有效快照。保存前刷新已有文件以保留其他键值。数值兼容旧整数字符串和浮点存储。
 
-`AmllMotion` 按曲目绝对毫秒采样 AMLL 移植曲线。字体塑形结果同时用于测量和逐字符变换，减少动画选项停用位移、缩放及辉光，保留逐字颜色。按 [NOTICE](../NOTICE) 保留 AGPL 模块的许可和来源。
+`AmllMotion` 按曲目绝对毫秒采样 AMLL 移植曲线。字体塑形结果同时用于测量和逐字符变换。`core/PerformanceProfile` 是持续渲染、后台工作和可选宿主集成的统一性能预算；低性能模式约以 15 FPS 刷新，由 `TimedKaraokeBoundary` 保留每个歌词单元的真实时间并只计算当前边界，停用布局过渡、逐字符轮廓、位移、缩放、辉光、音频捕获和私有歌词轴探测，改用轻量模拟频谱，并降低全屏与置顶检查频率。以后新增持续性高成本功能时，应同时定义其低性能模式行为。按 [NOTICE](../NOTICE) 保留 AGPL 模块的许可和来源。
 
 频谱使用当前 JVM 的进程 ID，包含其子进程，不读取系统混音或麦克风。辅助进程将 44.1 kHz、16 位立体声 PCM 按 2048 帧加 Hann 窗做 FFT，各声道先算功率后合并，按窗口平方增益还原各频段 RMS。四个频段共用一个缓慢调整的音量基准（上升 250 ms、下降 4 s），保持频段强弱差异；非线性柱高映射让持续强音约处于半高，保留瞬态空间。静音重置基准，噪声门限防止底噪被自动放大。这是音乐可视化，不作为绝对音量表使用。
 
-管道仅传四个归一化频段，每批约 46 ms；350 ms 无新数据自动归零。停用插件会关闭输入管道并回收该辅助进程。
+管道仅传四个归一化频段，每批约 46 ms；350 ms 无新数据自动归零。选择封面或开启低性能模式时不启动频谱辅助进程；低性能模式由 `SyntheticSpectrum` 根据播放时间生成低成本动画。运行中切换模式会按需回收或重启捕获进程，停用插件也会关闭输入管道并回收该辅助进程。
 
 ## 运行边界
 
@@ -34,11 +34,13 @@
 
 元数据由 `TrackMetadataLoader` 在单个后台线程读取，最多保留一个待处理请求；代次检查丢弃切歌或停止后的旧结果。`LocalTrackMetadata` 只读音频标签与同目录封面，不联网、不改写文件；封面解码按尺寸抽样，失败时独立回退，未知时长不推测进度上限。`CoverColorExtractor` 按色相家族统计占比，优先排除近黑、近白像素并在没有彩色候选时回退。`IslandPalette` 分别控制三类颜色。
 
+首次安装或重启若错过公开曲目加载回调，`CurrentTrackRecovery` 在后台短时重试，通过 `HostPlaybackProbe` 只读当前曲目对象并立即交给同一个元数据加载器；公开回调先到、成功恢复或达到重试上限后都会停止。该探测不在 Swing EDT 或绘制循环中运行。
+
 `IslandSurface` 提供稳定透明画布，动画只改变子面板尺寸，每帧清除整张画布。窗口输入区域跟随实际轮廓并保留抗锯齿边缘，透明空白不截获鼠标。`IslandPlacement` 独立计算工作区、顶底边吸附和窗口边界；底部吸附时画布与词岛共用底边，展开高度向上增长。展开高度与窗口尺寸同步插值。`PlaybackProgress` 独立管理拖动预览，在松开时调用公开 `seekTo`，切歌或时长不可用时取消。
 
 ## 上游依据
 
-- [SPW API 0.1.0-dev20](https://github.com/Moriafly/spw-workshop-api/tree/0.1.0-dev20)：播放扩展、配置与插件上下文；未依赖未公开接口。
+- [SPW API 0.1.0-dev20](https://github.com/Moriafly/spw-workshop-api/tree/0.1.0-dev20)：播放扩展、配置与插件上下文；启动曲目恢复和实验性完整歌词轴读取是失败即回退的可选宿主探测。
 - [Lyricify 原创许可声明](https://github.com/WXRIW/Lyricify-App#lyricify-原创)：灵动词岛概念与 CC BY-SA 4.0 署名。
 - [Lyricify 名词](https://docs.lyricify.app/lyricify-4/terms/)：使用“灵动词岛”名称。
 - [AMLL DOM 歌词动画](https://github.com/amll-dev/applemusic-like-lyrics/blob/58ccd3ffae7ec4e9a6d1cdb0dd88ac8c767f68a8/packages/core/src/lyric-player/dom/lyric-line.ts)：逐字抬升、长音强调及 AGPL-3.0 来源。
