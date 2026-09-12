@@ -2,7 +2,6 @@
 package io.github.gaboron.spwisland.core
 
 enum class LeadingContent { SPECTRUM, COVER }
-enum class VerticalAnchor { FREE, TOP, BOTTOM }
 
 data class IslandSettings(
     val enabled: Boolean = true,
@@ -27,14 +26,16 @@ data class IslandSettings(
     val opacity: Int = 96,
     val offsetMs: Int = 0,
     val screen: String = "",
-    val centerX: Int? = null,
-    val top: Int? = null,
-    val verticalAnchor: VerticalAnchor = VerticalAnchor.FREE
+    val positionX: Int? = null,
+    val positionY: Int? = null,
+    val positionAnchor: IslandAnchor? = null,
+    val legacyCenterX: Int? = null,
+    val legacyTop: Int? = null
 )
 
 interface SettingsStore {
     fun read(): IslandSettings
     fun set(key: String, value: Any)
-    fun savePosition(screen: String, centerX: Int, top: Int, verticalAnchor: VerticalAnchor)
+    fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor)
     fun resetPosition()
 }

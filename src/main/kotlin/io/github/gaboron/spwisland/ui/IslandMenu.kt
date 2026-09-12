@@ -20,26 +20,13 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         visibleIslandMenu?.isVisible = false
         islandDismisser.disarm()
         val menu = JPopupMenu()
-        menu.add(JMenuItem("完整设置请在 SPW 插件配置中调整").apply { isEnabled = false })
+        SettingsMenuSections.addCommon(menu, store, report)
         menu.addSeparator()
-        fun toggle(label: String, key: String, value: Boolean) {
-            menu.add(JCheckBoxMenuItem(label, value).apply { addActionListener { action { store.set(key, isSelected) } } })
-        }
-        val config = store.read()
-        toggle("显示词岛", "enabled", config.enabled)
-        toggle("鼠标穿透（从 SPW 设置解锁）", "click_through", config.clickThrough)
-        toggle("鼠标经过时自动隐藏（需鼠标穿透）", "auto_hide_on_hover", config.autoHideOnHover)
-        toggle("显示翻译", "translation", config.translation)
-        toggle("逐字高亮", "karaoke", config.karaoke)
-        toggle("实验性多行歌词", "experimental_multi_line", config.experimentalMultiLine)
-        toggle("全屏时隐藏", "hide_fullscreen", config.hideFullscreen)
-        toggle("暂停时隐藏", "hide_paused", config.hidePaused)
-        toggle("低性能模式", "reduced_motion", config.lowPerformance)
-        menu.add(JMenuItem(if (config.notch) "切换为胶囊" else "切换为顶部刘海").apply {
-            addActionListener { action { store.set("shape", if (config.notch) "pill" else "notch") } }
-        })
+        SettingsMenuSections.addDisplay(menu, store, report)
         menu.addSeparator()
         menu.add(JMenuItem("重置位置").apply { addActionListener { action { store.resetPosition() } } })
+        menu.addSeparator()
+        menu.add(JMenuItem("完整设置请前往 SPW 插件配置").apply { isEnabled = false })
         menu.add(JMenuItem("关于与许可").apply { addActionListener { about() } })
         menu.add(JMenuItem("项目源代码（GitHub）").apply { addActionListener { action { ProjectLinks.openSource() } } })
         menu.addPopupMenuListener(object : PopupMenuListener {
@@ -99,9 +86,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
     }
     private fun trayMenu() = JPopupMenu().apply {
         fun item(label: String, block: () -> Unit) { add(JMenuItem(label).apply { addActionListener { action(block) } }) }
-        // Settings come first: the submenu then unfolds from the top of the menu, which
-        // leaves it the most room on screen.
-        add(settingsMenu(store, report))
+        SettingsMenuSections.addCommon(this, store, report)
         addSeparator()
         item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
         item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }

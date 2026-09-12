@@ -13,12 +13,9 @@ import com.sun.jna.platform.win32.WinUser.HHOOK
 import com.sun.jna.platform.win32.WinUser.LowLevelMouseProc
 import com.sun.jna.platform.win32.WinUser.MSG
 import com.sun.jna.platform.win32.WinUser.MSLLHOOKSTRUCT
-import java.awt.Container
-import java.awt.Window
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import javax.swing.JPopupMenu
 import javax.swing.SwingUtilities
 
 /** Dismisses one heavyweight popup after a mouse press outside its native window. */
@@ -48,12 +45,8 @@ class GlobalMenuDismisser(private val onOutsidePress: () -> Unit) {
                     (info.pt.x < rect.left || info.pt.x >= rect.right ||
                         info.pt.y < rect.top || info.pt.y >= rect.bottom)
                 ) {
-                    val px = info.pt.x
-                    val py = info.pt.y
                     SwingUtilities.invokeLater {
-                        // JMenu submenus are separate windows outside the main menu rect;
-                        // presses there must not dismiss the menu.
-                        if (activeSession === session && !insideAnyPopup(px, py)) onOutsidePress()
+                        if (activeSession === session) onOutsidePress()
                     }
                 }
                 return user32.CallNextHookEx(
@@ -122,27 +115,6 @@ class GlobalMenuDismisser(private val onOutsidePress: () -> Unit) {
     }
 
     fun close() = disarm()
-
-    /** True when the point lies inside any visible popup of this JVM. Runs on the EDT.
-     *  The hook delivers physical pixels, so compare against native window rects
-     *  (physical) instead of Java logical bounds, which differ under DPI scaling. */
-    private fun insideAnyPopup(x: Int, y: Int): Boolean {
-        for (w in Window.getWindows()) {
-            if (!w.isShowing) continue
-            val pointer = Native.getWindowPointer(w) ?: continue
-            val rect = com.sun.jna.platform.win32.WinDef.RECT()
-            if (!user32.GetWindowRect(HWND(pointer), rect)) continue
-            if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) continue
-            if (containsPopup(w)) return true
-        }
-        return false
-    }
-
-    private fun containsPopup(c: Container): Boolean {
-        if (c is JPopupMenu) return true
-        for (child in c.components) if (child is Container && containsPopup(child)) return true
-        return false
-    }
 
     companion object {
         private const val WH_MOUSE_LL = 14

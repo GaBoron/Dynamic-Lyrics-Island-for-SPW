@@ -13,6 +13,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     private val alphaMask = IslandAlphaMask()
     override fun paint(graphics: Graphics) = alphaMask.paint(graphics as Graphics2D, this) { super.paint(it) }
     var settings = IslandSettings()
+    var anchor = IslandAnchor.TOP_CENTER
     var snapshot = PlaybackSnapshot(null, null, 0, false, PlaybackStatus.IDLE)
     var expanded = false
     var expandUpward = false
@@ -79,7 +80,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
             g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
-            val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRoundness)
+            val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRoundness, anchor)
             val palette = IslandPalette.from(settings, snapshot.metadata.coverRgb)
             val background = palette.background
             g.color = Color(background.red, background.green, background.blue, settings.opacity * 255 / 100)
