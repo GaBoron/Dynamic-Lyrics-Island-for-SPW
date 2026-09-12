@@ -2,7 +2,6 @@
 package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.platform.GlobalMenuDismisser
-import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.awt.MouseInfo
 import java.awt.Point
@@ -41,7 +40,6 @@ class SwingTrayPopup(private val createMenu: () -> JPopupMenu) : AutoCloseable {
         }.also { owner = it }
         val menu = createMenu().apply {
             isLightWeightPopupEnabled = false
-            applyFont(this, displayFont())
             addPopupMenuListener(object : PopupMenuListener {
                 override fun popupMenuWillBecomeVisible(event: PopupMenuEvent) = Unit
                 override fun popupMenuWillBecomeInvisible(event: PopupMenuEvent) { owner?.isVisible = false; dismisser.disarm() }
@@ -72,13 +70,6 @@ class SwingTrayPopup(private val createMenu: () -> JPopupMenu) : AutoCloseable {
         visibleMenu = null
         owner?.isVisible = false
         dismisser.disarm()
-    }
-
-    internal fun displayFont(): Font = Windows11PopupStyle.font
-
-    private fun applyFont(component: java.awt.Component, font: Font) {
-        component.font = font
-        if (component is java.awt.Container) component.components.forEach { applyFont(it, font) }
     }
 
     override fun close() {

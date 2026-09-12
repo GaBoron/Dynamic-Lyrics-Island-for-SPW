@@ -99,6 +99,10 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
     }
     private fun trayMenu() = JPopupMenu().apply {
         fun item(label: String, block: () -> Unit) { add(JMenuItem(label).apply { addActionListener { action(block) } }) }
+        // Settings come first: the submenu then unfolds from the top of the menu, which
+        // leaves it the most room on screen.
+        add(settingsMenu(store, report))
+        addSeparator()
         item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
         item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
         item("重置位置") { store.resetPosition() }
