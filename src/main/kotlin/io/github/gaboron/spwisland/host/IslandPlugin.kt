@@ -9,18 +9,29 @@ class IslandPlugin(context: PluginContext) : SpwPlugin(context) {
         if (runtime != null) return
         val created = IslandRuntime()
         runtime = created
-        try { created.start() } catch (error: Throwable) {
-            runtime = null; created.close(); throw error
+        try {
+            created.start()
+            playback.attach(created)
+        } catch (error: Throwable) {
+            playback.detach(created)
+            runtime = null
+            created.close()
+            throw error
         }
     }
-    override fun stop() { val old = runtime; runtime = null; old?.close() }
+    override fun stop() {
+        val old = runtime ?: return
+        playback.detach(old)
+        runtime = null
+        old.close()
+    }
     override fun update() = stop()
     override fun delete() = stop()
 
     companion object {
         // The single bridge required by PF4J's independently constructed extension instance.
         @Volatile private var runtime: IslandRuntime? = null
-        internal fun active(): IslandRuntime? = runtime
+        internal val playback = PlaybackCallbackBridge()
         @JvmStatic @JvmName("recover") fun recover() { runtime?.recover() }
         @JvmStatic @JvmName("about") fun about() { runtime?.about() }
 

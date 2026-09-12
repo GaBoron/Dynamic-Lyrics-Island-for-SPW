@@ -2,26 +2,52 @@
 package io.github.gaboron.spwisland.platform
 
 import java.nio.file.Path
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 
-/** Starts a private process-loopback reader; only four FFT band levels cross the pipe. */
+/** Runs the private process-loopback reader only while live spectrum is enabled. */
 class ProcessSpectrum : AutoCloseable {
-    @Volatile private var stopped = false
+    @Volatile private var closed = false
+    @Volatile private var enabled = false
     @Volatile private var process: Process? = null
     @Volatile private var sample = FloatArray(4)
     @Volatile private var receivedAt = 0L
     @Volatile var status = "正在连接 SPW 音频"
         private set
-    private val worker = thread(name = "SPW Island audio", isDaemon = true) {
+    private val worker = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "SPW Island audio").apply { isDaemon = true }
+    }
+
+    @Synchronized fun setEnabled(value: Boolean) {
+        if (closed || enabled == value) return
+        enabled = value
+        if (value) {
+            status = "正在连接 SPW 音频"
+            worker.execute(::capture)
+        } else {
+            status = "低性能模式已停用实时频谱"
+            sample = FloatArray(4)
+            process?.destroy()
+        }
+    }
+
+    private fun capture() {
+        var launched: Process? = null
         try {
+            if (!enabled || closed) return
             val resource = ProcessSpectrum::class.java.getResource("/native/spw-spectrum.exe")
                 ?: error("插件中缺少 native/spw-spectrum.exe")
             check(resource.protocol == "file") { "请使用 SPW 插件 ZIP 安装频谱程序" }
             val helper = ProcessBuilder(Path.of(resource.toURI()).toString(), ProcessHandle.current().pid().toString())
                 .redirectErrorStream(true).start()
-            process = helper
-            if (stopped) helper.destroy()
+            launched = helper
+            synchronized(this) {
+                if (!enabled || closed) {
+                    helper.destroy()
+                    return
+                }
+                process = helper
+            }
             helper.inputStream.bufferedReader().useLines { lines -> lines.forEach { line ->
                 if (line == "READY") status = "SPW 进程音频频谱"
                 else {
@@ -35,22 +61,34 @@ class ProcessSpectrum : AutoCloseable {
                     }
                 }
             } }
-            if (!stopped && helper.waitFor() != 0) status = "频谱不可用（需要 Windows 20348+ 与共享音频输出）：$status"
+            if (enabled && !closed && helper.waitFor() != 0) {
+                status = "频谱不可用（需要 Windows 20348+ 与共享音频输出）：$status"
+            }
         } catch (error: Exception) {
-            if (!stopped) {
+            if (enabled && !closed) {
                 status = "频谱不可用：${error.message}"
                 System.err.println("[SPW Island] $status")
             }
-        } finally { sample = FloatArray(4) }
+        } finally {
+            synchronized(this) { if (process === launched) process = null }
+            sample = FloatArray(4)
+        }
     }
+
     fun levels(): FloatArray = if (System.nanoTime() - receivedAt < 350_000_000) sample else FloatArray(4)
     override fun close() {
-        stopped = true
-        process?.let { helper ->
-            runCatching { helper.outputStream.bufferedWriter().apply { write("stop\n"); flush() } }
-            if (!helper.waitFor(800, TimeUnit.MILLISECONDS)) helper.destroy()
-            if (!helper.waitFor(200, TimeUnit.MILLISECONDS)) helper.destroyForcibly()
+        val helper = synchronized(this) {
+            if (closed) return
+            closed = true
+            enabled = false
+            process
         }
-        worker.join(200)
+        helper?.let {
+            runCatching { it.outputStream.bufferedWriter().apply { write("stop\n"); flush() } }
+            if (!it.waitFor(800, TimeUnit.MILLISECONDS)) it.destroy()
+            if (!it.waitFor(200, TimeUnit.MILLISECONDS)) it.destroyForcibly()
+        }
+        worker.shutdownNow()
+        worker.awaitTermination(200, TimeUnit.MILLISECONDS)
     }
 }

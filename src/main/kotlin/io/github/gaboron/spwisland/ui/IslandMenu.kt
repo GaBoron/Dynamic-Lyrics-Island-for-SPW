@@ -34,7 +34,7 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
         toggle("实验性多行歌词", "experimental_multi_line", config.experimentalMultiLine)
         toggle("全屏时隐藏", "hide_fullscreen", config.hideFullscreen)
         toggle("暂停时隐藏", "hide_paused", config.hidePaused)
-        toggle("减少动画", "reduced_motion", config.reducedMotion)
+        toggle("低性能模式", "reduced_motion", config.lowPerformance)
         menu.add(JMenuItem(if (config.notch) "切换为胶囊" else "切换为顶部刘海").apply {
             addActionListener { action { store.set("shape", if (config.notch) "pill" else "notch") } }
         })

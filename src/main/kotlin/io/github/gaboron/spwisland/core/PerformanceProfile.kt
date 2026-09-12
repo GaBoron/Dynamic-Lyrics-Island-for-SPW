@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-3.0-only
+package io.github.gaboron.spwisland.core
+
+enum class SpectrumMode { LIVE, SYNTHETIC }
+
+/** Central performance budget for rendering, background work and optional host integration. */
+enum class PerformanceProfile(
+    val frameDelayMs: Int,
+    val animateLayout: Boolean,
+    val detailedKaraoke: Boolean,
+    val spectrumMode: SpectrumMode,
+    val probeHostLyrics: Boolean,
+    val screenCheckIntervalNs: Long,
+    val topmostCheckIntervalNs: Long
+) {
+    STANDARD(16, true, true, SpectrumMode.LIVE, true, 400_000_000L, 100_000_000L),
+    LOW(67, false, false, SpectrumMode.SYNTHETIC, false, 1_500_000_000L, 500_000_000L)
+}
+
+val IslandSettings.performance: PerformanceProfile
+    get() = if (lowPerformance) PerformanceProfile.LOW else PerformanceProfile.STANDARD

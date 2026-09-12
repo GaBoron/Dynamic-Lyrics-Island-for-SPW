@@ -48,7 +48,8 @@ object IslandLyricsPainter {
             LyricPainter.draw(copy, block.main, line?.timedWords.orEmpty(),
                 if (line?.timedWords?.isNotEmpty() == true) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
                 inset, row.mainBaseline, available, block.mainFont, settings.karaoke,
-                color = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric, motion = !settings.reducedMotion)
+                color = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric,
+                detailedKaraoke = settings.performance.detailedKaraoke)
             block.sub?.let { LyricPainter.draw(copy, it, emptyList(), (time - (line?.startMs ?: 0)).coerceAtLeast(0),
                 inset, row.subBaseline, available, block.subFont, false, Color(177, 182, 195)) }
         } finally { copy.dispose() }

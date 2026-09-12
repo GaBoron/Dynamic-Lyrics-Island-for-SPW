@@ -18,6 +18,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
     private var generation = 0L
     private var pendingSeek: Long? = null
     private var pendingSeekDeadline = 0L
+    private val heartbeatRecovery = PlaybackHeartbeatRecovery()
 
     @Synchronized fun trackChanged(value: Track): Long {
         if (track != value) {
@@ -29,6 +30,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             position = 0
             anchor = nanoTime()
             pendingSeek = null
+            heartbeatRecovery.trackChanged()
         }
         return generation
     }
@@ -56,6 +58,12 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             if (now < pendingSeekDeadline && kotlin.math.abs(next - target) > SEEK_ACK_TOLERANCE_MS) return
             pendingSeek = null
         }
+        if (heartbeatRecovery.positionChanged(next)) {
+            // A plugin installed while SPW is already playing misses the earlier state callbacks.
+            // Consecutive forward heartbeats prove the clock is running without guessing from one seek.
+            playing = true
+            if (status == PlaybackStatus.IDLE) status = PlaybackStatus.READY
+        }
         position = next
         anchor = now
     }
@@ -64,18 +72,22 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
         anchor = nanoTime()
         pendingSeek = position
         pendingSeekDeadline = anchor + SEEK_ACK_WINDOW_NS
+        heartbeatRecovery.seeked()
         // Await the host's replacement line; do not retain text from before a seek.
         line = null
     }
     @Synchronized fun playingChanged(value: Boolean) {
         position = currentPosition()
         anchor = nanoTime()
+        heartbeatRecovery.playingChanged()
         playing = value
+        if (value && status == PlaybackStatus.IDLE) status = PlaybackStatus.READY
     }
     @Synchronized fun stateChanged(value: PlaybackStatus) {
         position = currentPosition()
         anchor = nanoTime()
         status = value
+        heartbeatRecovery.stateChanged(value)
         if (value == PlaybackStatus.IDLE || value == PlaybackStatus.ENDED) {
             playing = false
             line = null

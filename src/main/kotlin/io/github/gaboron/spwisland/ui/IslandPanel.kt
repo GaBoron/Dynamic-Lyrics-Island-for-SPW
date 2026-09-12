@@ -90,7 +90,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val reveal = expansion ?: if (expanded) 1.0 else 0.0
             val lyricAreaHeight = (height - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
             val lyricAreaTop = if (expandUpward) height - lyricAreaHeight else 0f
-            val animation = if (settings.reducedMotion) 1.0 else transition
+            val animation = if (settings.performance.animateLayout) transition else 1.0
             val sidePadding = (IslandTextBlock.EXPANDED_SIDE_PADDING * reveal).toFloat()
             val textInset = IslandTextBlock.INSET + sidePadding
             IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
@@ -116,7 +116,9 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     private fun drawStatus(g: Graphics2D, centerY: Int, centerX: Int) {
         if (snapshot.line == null && snapshot.lyrics.isEmpty() && snapshot.playing) {
             for (i in 0..2) {
-                val a = if (settings.reducedMotion) 150 else (150 + 90 * sin(snapshot.positionMs / 350.0 - i)).toInt()
+                val a = if (settings.performance.animateLayout) {
+                    (150 + 90 * sin(snapshot.positionMs / 350.0 - i)).toInt()
+                } else 150
                 g.color = Color(190, 204, 221, a); g.fillOval(centerX - 8 + i * 7, centerY - 2, 4, 4)
             }
         } else {
