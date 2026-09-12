@@ -28,12 +28,13 @@ import javax.swing.plaf.basic.BasicSeparatorUI
 
 /** Shared Windows 11 inspired presentation for island and tray popup menus. */
 internal object Windows11PopupStyle {
-    private val surface = Color(0x20, 0x20, 0x20)
-    private val outline = Color(0x45, 0x45, 0x45)
-    private val hover = Color(0x35, 0x35, 0x35)
-    private val text = Color(0xF5, 0xF5, 0xF5)
-    private val muted = Color(0x9D, 0x9D, 0x9D)
-    private val accent = Color(0x60, 0xCD, 0xFF)
+    private var palette = PopupMenuPalette.current()
+    private val surface: Color get() = palette.surface
+    private val outline: Color get() = palette.outline
+    private val hover: Color get() = palette.hover
+    private val text: Color get() = palette.text
+    private val muted: Color get() = palette.muted
+    private val accent: Color get() = palette.accent
     private const val popupArc = 12
 
     val font: Font by lazy {
@@ -47,6 +48,7 @@ internal object Windows11PopupStyle {
     }
 
     fun apply(menu: JPopupMenu) {
+        palette = PopupMenuPalette.current()
         menu.ui = PopupUi()
         menu.isOpaque = false
         menu.background = surface

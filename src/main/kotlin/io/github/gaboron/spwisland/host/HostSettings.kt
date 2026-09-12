@@ -42,17 +42,10 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
 
     override fun read(): IslandSettings = synchronized(lock) { accepted ?: decode() }
     private fun migrateSettings() {
-        // Native sliders use numbers; migrate the previous text fields.
+        // Native sliders use floating-point values. Persist whole-number settings as integers
+        // so reopening SPW does not inherit noisy fractional values from the slider thumb.
         if (!Files.exists(config.getConfigPath()) || !config.reload()) return
-        var migrated = false
-        for ((key, limits) in mapOf("font_size" to Triple(22, 14, 42), "max_width" to Triple(640, 280, 1200),
-            "opacity" to Triple(96, 35, 100), "offset_ms" to Triple(0, -2000, 2000))) {
-            if (config.get<Any>(key, "") is String) {
-                config.set(key, number(key, limits.first, limits.second, limits.third))
-                migrated = true
-            }
-        }
-        migrated = snapCornerRoundness() || migrated
+        val migrated = normalizeIntegerSettings()
         if (migrated) check(config.save()) { "词岛旧设置迁移失败，请检查 SPW 配置目录权限。" }
     }
     private fun decode(): IslandSettings = IslandSettings(
@@ -77,13 +70,11 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
-        centerX = number("center_x", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },
-        top = number("top", Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE },
-        verticalAnchor = when (config.get("vertical_anchor", "free")) {
-            "top" -> VerticalAnchor.TOP
-            "bottom" -> VerticalAnchor.BOTTOM
-            else -> VerticalAnchor.FREE
-        }
+        positionX = optionalNumber("position_x"),
+        positionY = optionalNumber("position_y"),
+        positionAnchor = IslandAnchor.fromStorage(config.get("position_anchor", "")),
+        legacyCenterX = optionalNumber("center_x"),
+        legacyTop = optionalNumber("top")
     )
     internal fun refresh() {
         val notify = synchronized(lock) {
@@ -92,7 +83,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             if (bytes.isEmpty() || fingerprint?.contentEquals(bytes) == true) return
             // Failed/partial writes must not replace the last usable snapshot with defaults.
             if (!config.reload()) return
-            val normalized = snapCornerRoundness()
+            val normalized = normalizeIntegerSettings()
             if (normalized && !config.save()) return
             val value = decode()
             fingerprint = if (normalized) Files.readAllBytes(config.getConfigPath()) else bytes
@@ -106,21 +97,34 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         val value = text?.trim()?.toDoubleOrNull() ?: (config.get<Any>(key, default) as? Number)?.toDouble()
         return value?.takeIf { it.isFinite() }?.coerceIn(min.toDouble(), max.toDouble())?.roundToInt() ?: default
     }
-    private fun snapCornerRoundness(): Boolean {
-        val raw = config.get<Any>("corner_roundness", 60)
-        val value = (raw as? Number)?.toDouble() ?: (raw as? String)?.trim()?.toDoubleOrNull() ?: return false
-        val rounded = value.takeIf { it.isFinite() }?.coerceIn(0.0, 100.0)?.roundToInt() ?: 60
-        if (raw is Number && raw.toDouble() == rounded.toDouble()) return false
-        config.set("corner_roundness", rounded)
-        return true
+
+    private fun optionalNumber(key: String): Int? =
+        number(key, Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE }
+
+    private fun normalizeIntegerSettings(): Boolean {
+        var changed = false
+        for ((key, limits) in INTEGER_SETTINGS) {
+            val raw = config.get<Any>(key, "")
+            val value = (raw as? Number)?.toDouble() ?: (raw as? String)?.trim()?.toDoubleOrNull() ?: continue
+            val rounded = value.takeIf { it.isFinite() }
+                ?.coerceIn(limits.first.toDouble(), limits.last.toDouble())?.roundToInt() ?: limits.default
+            if (raw !is Number || raw.toDouble() != rounded.toDouble()) {
+                config.set(key, rounded)
+                changed = true
+            }
+        }
+        return changed
     }
     override fun set(key: String, value: Any) = update { it.set(key, value) }
-    override fun savePosition(screen: String, centerX: Int, top: Int, verticalAnchor: VerticalAnchor) = update {
-        it.set("screen", screen); it.set("center_x", centerX); it.set("top", top)
-        it.set("vertical_anchor", verticalAnchor.name.lowercase())
+    override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) = update {
+        it.set("screen", screen); it.set("position_x", x); it.set("position_y", y)
+        it.set("position_anchor", anchor.storageName)
+        // Clear legacy center/top storage after the first drag on the automatic anchor model.
+        it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE); it.set("vertical_anchor", "free")
     }
     override fun resetPosition() = update {
-        it.set("screen", ""); it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE)
+        it.set("screen", ""); it.set("position_x", Int.MIN_VALUE); it.set("position_y", Int.MIN_VALUE)
+        it.set("position_anchor", ""); it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE)
         it.set("vertical_anchor", "free")
     }
     private fun update(change: (ConfigHelper) -> Unit) {
@@ -139,5 +143,17 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         synchronized(lock) { closed = true }
         poller.shutdownNow()
         manager.removeConfigChangeListener(listener)
+    }
+
+    private data class IntegerLimits(val default: Int, val first: Int, val last: Int)
+
+    private companion object {
+        val INTEGER_SETTINGS = mapOf(
+            "corner_roundness" to IntegerLimits(60, 0, 100),
+            "font_size" to IntegerLimits(22, 14, 42),
+            "max_width" to IntegerLimits(640, 280, 1200),
+            "opacity" to IntegerLimits(96, 35, 100),
+            "offset_ms" to IntegerLimits(0, -2000, 2000)
+        )
     }
 }
