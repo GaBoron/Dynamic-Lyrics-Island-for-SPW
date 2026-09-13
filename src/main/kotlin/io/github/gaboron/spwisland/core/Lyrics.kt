@@ -11,21 +11,23 @@ data class Word(val startMs: Long, val endMs: Long, val text: String) {
 }
 data class LyricLine(val startMs: Long, val endMs: Long, val text: String,
                      val translation: String?, val words: List<Word>) {
-    // Only render cell-level timing when cells describe the displayed string exactly.
-    // Ordinary LRC or malformed timing stays readable without invented word timestamps.
+    // Keep every trustworthy cell, including a single cell spanning the full line. Whether those
+    // cells represent line or word timing can only be decided from the complete song.
     val timedWords: List<Word> = words.takeIf { cells ->
-        cells.isNotEmpty() && !cells.all { it.startMs == startMs && it.endMs == endMs } &&
-            cells.joinToString("") { it.text } == text &&
+        cells.isNotEmpty() && cells.joinToString("") { it.text } == text &&
             cells.all { it.endMs >= it.startMs } &&
             cells.zipWithNext().all { (a, b) -> a.startMs <= b.startMs }
     }.orEmpty()
+    val hasWordTimingEvidence: Boolean = timedWords.any { it.startMs != startMs || it.endMs != endMs }
 }
 
 enum class PlaybackStatus { IDLE, BUFFERING, READY, ENDED }
 data class PlaybackSnapshot(val track: Track?, val line: LyricLine?, val positionMs: Long,
                             val playing: Boolean, val status: PlaybackStatus,
                             val metadata: TrackMetadata = TrackMetadata(),
-                            val lyrics: List<LyricLine> = emptyList())
+                            val lyrics: List<LyricLine> = emptyList()) {
+    val usesWordTiming: Boolean = lyrics.ifEmpty { listOfNotNull(line) }.any { it.hasWordTimingEvidence }
+}
 
 class CoverArtwork(val width: Int, val height: Int, internal val argb: IntArray)
 data class TrackMetadata(val durationMs: Long = 0, val coverRgb: Int? = null,

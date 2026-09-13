@@ -9,7 +9,8 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
     }
     private var track: Track? = null
     private var line: LyricLine? = null
-    private var lyrics: List<LyricLine> = emptyList()
+    private var callbackLyrics: List<LyricLine> = emptyList()
+    private var documentLyrics: List<LyricLine> = emptyList()
     private var position = 0L
     private var anchor = nanoTime()
     private var playing = false
@@ -26,7 +27,8 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             generation++
             metadata = TrackMetadata()
             line = null
-            lyrics = emptyList()
+            callbackLyrics = emptyList()
+            documentLyrics = emptyList()
             position = 0
             anchor = nanoTime()
             pendingSeek = null
@@ -43,12 +45,13 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             line = value
             // Public callbacks already carry start/end time. Retaining emitted lines is enough to
             // reconstruct every overlap even when the experimental host-document probe is unavailable.
-            lyrics = (lyrics.filterNot { it.startMs == value.startMs && it.text == value.text } + value)
-                .sortedWith(compareBy<LyricLine> { it.startMs }.thenBy { it.endMs })
+            callbackLyrics = mergeLyrics(callbackLyrics, listOf(value))
         }
     }
     @Synchronized fun lyricsChanged(value: List<LyricLine>) {
-        lyrics = value.filter { it.text.isNotBlank() && it.startMs >= 0 && it.endMs >= it.startMs }
+        documentLyrics = mergeLyrics(emptyList(), value.filter {
+            it.text.isNotBlank() && it.startMs >= 0 && it.endMs >= it.startMs
+        })
     }
     @Synchronized fun positionChanged(value: Long) {
         val now = nanoTime()
@@ -91,15 +94,25 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
         if (value == PlaybackStatus.IDLE || value == PlaybackStatus.ENDED) {
             playing = false
             line = null
-            lyrics = emptyList()
+            callbackLyrics = emptyList()
+            documentLyrics = emptyList()
             pendingSeek = null
             if (value == PlaybackStatus.IDLE) { track = null; position = 0; metadata = TrackMetadata(); generation++ }
         }
     }
     @Synchronized fun snapshot(): PlaybackSnapshot {
         val now = currentPosition()
-        return PlaybackSnapshot(track, line, now, playing && status == PlaybackStatus.READY, status, metadata, lyrics)
+        return PlaybackSnapshot(track, line, now, playing && status == PlaybackStatus.READY, status, metadata,
+            mergeLyrics(documentLyrics, callbackLyrics))
     }
+    private fun mergeLyrics(existing: List<LyricLine>, updates: List<LyricLine>): List<LyricLine> =
+        updates.fold(existing) { lines, update ->
+            lines.filterNot { sameLine(it, update) } + update
+        }.sortedWith(compareBy<LyricLine> { it.startMs }.thenBy { it.endMs })
+
+    private fun sameLine(first: LyricLine, second: LyricLine): Boolean =
+        first.startMs == second.startMs && first.endMs == second.endMs && first.text == second.text
+
     private fun currentPosition(): Long = position + if (playing && status == PlaybackStatus.READY) {
         // Freeze on a missing host heartbeat rather than letting stale lyrics run indefinitely.
         ((nanoTime() - anchor) / 1_000_000).coerceIn(0, 2500)

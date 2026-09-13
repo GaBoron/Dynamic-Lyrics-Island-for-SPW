@@ -45,8 +45,8 @@ object IslandLyricsPainter {
             copy.translate(width / 2.0, height / 2.0 + offset)
             copy.scale(scale, scale); copy.translate(-width / 2.0, -height / 2.0)
             val available = width - inset * 2
-            LyricPainter.draw(copy, block.main, line?.timedWords.orEmpty(),
-                if (line?.timedWords?.isNotEmpty() == true) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
+            LyricPainter.draw(copy, block.main, block.timedWords,
+                if (block.timedWords.isNotEmpty()) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
                 inset, row.mainBaseline, available, block.mainFont, settings.karaoke,
                 color = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric,
                 detailedKaraoke = settings.performance.detailedKaraoke)

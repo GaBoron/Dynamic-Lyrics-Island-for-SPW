@@ -16,12 +16,13 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
     val subFont = mainFont.deriveFont(settings.fontSize * .7f)
     val shapedMain = LyricTypography.shape(main, mainFont)
     val shapedSub = sub?.let { LyricTypography.shape(it, subFont) }
+    val timedWords = line?.timedWords.takeIf { snapshot.usesWordTiming }.orEmpty()
     val gap = if (sub == null) 0f else 8f
     val height = shapedMain.height + gap + (shapedSub?.height ?: 0f)
     val preferredHeight = maxOf(settings.fontSize + 28, ceil(height + 28).toInt())
 
     fun size(maxWidth: Int, expanded: Boolean): Dimension {
-        val motionPad = if (settings.karaoke && line?.timedWords?.isNotEmpty() == true) settings.fontSize * .32f else 0f
+        val motionPad = if (settings.karaoke && timedWords.isNotEmpty()) settings.fontSize * .32f else 0f
         val needed = ceil(maxOf(shapedMain.width + motionPad, shapedSub?.width ?: 0f) + INSET * 2).toInt()
         val limit = maxWidth.coerceAtLeast(1)
         val minimum = if (expanded) PlaybackProgress.FIXED_WIDTH + EXPANDED_SIDE_SPACE * 2 else 240

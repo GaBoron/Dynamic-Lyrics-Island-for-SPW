@@ -2,47 +2,22 @@
 package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.SettingsStore
-import io.github.gaboron.spwisland.platform.GlobalMenuDismisser
+import io.github.gaboron.spwisland.platform.NativePopupMenu
+import io.github.gaboron.spwisland.platform.SystemTheme
 import java.awt.*
 import java.awt.image.BufferedImage
 import javax.swing.*
-import javax.swing.event.PopupMenuEvent
-import javax.swing.event.PopupMenuListener
 
 /** Recovery controls remain available in SPW settings even if the tray is unavailable. */
-class IslandMenu(private val store: SettingsStore, private val report: (Throwable) -> Unit) : AutoCloseable {
+class IslandMenu(private val store: SettingsStore, private val report: (Throwable) -> Unit,
+                 private val owner: Window) : AutoCloseable {
     private var tray: TrayIcon? = null
-    private val trayPopup = SwingTrayPopup(::trayMenu)
-    private var visibleIslandMenu: JPopupMenu? = null
-    private val islandDismisser = GlobalMenuDismisser { visibleIslandMenu?.isVisible = false }
+    private val commands = IslandMenuCommands(store, ::about) { ProjectLinks.openSource() }
+    private val popup = NativePopupMenu(report)
     private fun action(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
+    @Suppress("UNUSED_PARAMETER")
     fun popup(owner: Component, x: Int, y: Int) {
-        visibleIslandMenu?.isVisible = false
-        islandDismisser.disarm()
-        val menu = JPopupMenu()
-        SettingsMenuSections.addCommon(menu, store, report)
-        menu.addSeparator()
-        SettingsMenuSections.addDisplay(menu, store, report)
-        menu.addSeparator()
-        menu.add(JMenuItem("重置位置").apply { addActionListener { action { store.resetPosition() } } })
-        menu.addSeparator()
-        menu.add(JMenuItem("完整设置请前往 SPW 插件配置").apply { isEnabled = false })
-        menu.add(JMenuItem("关于与许可").apply { addActionListener { about() } })
-        menu.add(JMenuItem("项目源代码（GitHub）").apply { addActionListener { action { ProjectLinks.openSource() } } })
-        menu.addPopupMenuListener(object : PopupMenuListener {
-            override fun popupMenuWillBecomeVisible(event: PopupMenuEvent) = Unit
-            override fun popupMenuWillBecomeInvisible(event: PopupMenuEvent) = dismissIslandMenu(menu)
-            override fun popupMenuCanceled(event: PopupMenuEvent) = dismissIslandMenu(menu)
-        })
-        visibleIslandMenu = menu
-        Windows11PopupStyle.apply(menu)
-        menu.show(owner, x, y)
-        SwingUtilities.getWindowAncestor(menu)?.let(islandDismisser::arm)
-    }
-
-    private fun dismissIslandMenu(menu: JPopupMenu) {
-        if (visibleIslandMenu === menu) visibleIslandMenu = null
-        islandDismisser.disarm()
+        showPopup()
     }
     fun installTray() {
         if (!SystemTray.isSupported() || tray != null) return
@@ -60,12 +35,22 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
                 override fun mousePressed(event: java.awt.event.MouseEvent) = showPopup(event)
                 override fun mouseReleased(event: java.awt.event.MouseEvent) = showPopup(event)
                 private fun showPopup(event: java.awt.event.MouseEvent) {
-                    if (event.isPopupTrigger) SwingUtilities.invokeLater { trayPopup.show(event.locationOnScreen) }
+                    if (event.isPopupTrigger) SwingUtilities.invokeLater { this@IslandMenu.showPopup() }
                 }
             })
         }
         SystemTray.getSystemTray().add(created)
         tray = created
+    }
+    private fun showPopup() {
+        popup.show(
+            commands.entries(),
+            dark = !SystemTheme.isLight(),
+            lowPerformance = store.read().lowPerformance,
+            owner = owner
+        ) { command ->
+            SwingUtilities.invokeLater { action { commands.execute(command) } }
+        }
     }
     fun about() {
         JOptionPane.showMessageDialog(null,
@@ -84,22 +69,8 @@ class IslandMenu(private val store: SettingsStore, private val report: (Throwabl
             "完整许可、第三方声明及对应源码随插件 ZIP 提供。",
             "关于与许可", JOptionPane.INFORMATION_MESSAGE)
     }
-    private fun trayMenu() = JPopupMenu().apply {
-        fun item(label: String, block: () -> Unit) { add(JMenuItem(label).apply { addActionListener { action(block) } }) }
-        SettingsMenuSections.addCommon(this, store, report)
-        addSeparator()
-        item("显示／隐藏词岛") { store.set("enabled", !store.read().enabled) }
-        item("解除鼠标穿透并显示") { store.set("click_through", false); store.set("enabled", true) }
-        item("重置位置") { store.resetPosition() }
-        addSeparator()
-        item("关于与许可") { about() }
-        item("项目源代码（GitHub）") { ProjectLinks.openSource() }
-    }.also(Windows11PopupStyle::apply)
     override fun close() {
-        visibleIslandMenu?.isVisible = false
-        visibleIslandMenu = null
-        islandDismisser.close()
-        trayPopup.close()
+        popup.close()
         tray?.let { SystemTray.getSystemTray().remove(it) }; tray = null
     }
 }

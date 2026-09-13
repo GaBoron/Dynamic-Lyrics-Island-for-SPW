@@ -28,7 +28,7 @@ class IslandLyricsLayout(snapshot: PlaybackSnapshot, private val settings: Islan
 
     fun size(maxWidth: Int, expanded: Boolean): Dimension {
         val motionPad = blocks.maxOf { block ->
-            if (settings.karaoke && block.line?.timedWords?.isNotEmpty() == true) settings.fontSize * .32f else 0f
+            if (settings.karaoke && block.timedWords.isNotEmpty()) settings.fontSize * .32f else 0f
         }
         val needed = ceil(blocks.maxOf { maxOf(it.shapedMain.width + motionPad, it.shapedSub?.width ?: 0f) } +
             IslandTextBlock.INSET * 2).toInt()

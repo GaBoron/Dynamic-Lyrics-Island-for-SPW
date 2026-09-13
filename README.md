@@ -68,6 +68,14 @@ flowchart LR
 ## 🛠️ 常见问题
 
 <details>
+<summary><strong>MyDockFinder 兼容性：打开托盘菜单后词岛位移、闪烁</strong></summary>
+
+当前与 **MyDockFinder 的任务栏／托盘菜单入口不兼容**。从该入口右键打开菜单后，将鼠标移到词岛上，可能出现词岛整体反复右移、回位和闪烁；菜单关闭后也可能短暂持续。
+
+已在实际使用中对比确认：使用 Windows 系统任务栏的托盘入口打开菜单不会出现上述问题。请改用系统托盘入口，或直接右击词岛打开菜单。
+</details>
+
+<details>
 <summary><strong>没有歌词或歌名</strong></summary>
 
 先确认 SPW 自己能够显示歌词，再切换一次歌曲。歌名来自歌词加载回调；若其他插件提前返回歌词，SPW 是否继续通知本插件取决于宿主调用顺序。

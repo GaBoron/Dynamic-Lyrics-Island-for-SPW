@@ -22,11 +22,12 @@ internal class HostPlaybackProbe {
         return runCatching {
             val playbackService = service ?: findService()?.also { service = it } ?: return null
             val monitor = findObject(listOf(playbackService), 2,
-                { it.javaClass.name == PLAYBACK_MONITOR }, ::mayTraverse) ?: return null
-            val rawDocument = monitor.call("getLyricsDocument") ?: return null
-            val document = rawDocument.call("getValue") ?: rawDocument
-            val rawLines = document.call("getLyricsLines") ?: document.field("lyricsLines") ?: return null
-            (rawLines as? Iterable<*>)?.mapNotNull(::mapLine)?.sortedBy { it.startMs }
+                { it.javaClass.name == PLAYBACK_MONITOR }, ::mayTraverse)
+            val legacyDocument = monitor?.call("getLyricsDocument")?.let(::unwrap)
+            val rawLines = legacyDocument?.lineValues()
+                ?: playbackService.field("lyricsEmitter")?.let { findLyricsLines(listOf(it), 3) }
+                ?: return null
+            rawLines.mapNotNull(::mapLine).sortedBy { it.startMs }
         }.getOrNull()
     }
 
@@ -53,18 +54,67 @@ internal class HostPlaybackProbe {
 
     private fun mapLine(value: Any?): LyricLine? {
         value ?: return null
-        val start = value.number("getStartTime") ?: return null
-        val end = value.number("getEndTime") ?: return null
-        val text = value.call("getPureMainText") as? String ?: return null
-        val translation = value.call("getPureSubText") as? String
-        val words = (value.call("getLyricsCells") as? Iterable<*>)?.mapNotNull { cell ->
-            cell ?: return@mapNotNull null
-            val cellStart = cell.number("getStartTime") ?: return@mapNotNull null
-            val cellEnd = cell.number("getEndTime") ?: return@mapNotNull null
-            val cellText = cell.call("getText") as? String ?: return@mapNotNull null
-            Word(cellStart, cellEnd, cellText)
-        }.orEmpty()
+        val fields = allFields(value.javaClass).filterNot { Modifier.isStatic(it.modifiers) }.toList()
+        val times = fields.filter { it.type == Long::class.javaPrimitiveType || it.type == Long::class.java }
+            .mapNotNull { (it.read(value) as? Number)?.toLong() }
+        val strings = fields.filter { it.type == String::class.java }.map { it.read(value) as? String }
+        val start = value.number("getStartTime") ?: value.number("getStartMs")
+            ?: value.numberField("startTime", "_startTime", "startMs", "_startMs") ?: times.getOrNull(0) ?: return null
+        val end = value.number("getEndTime") ?: value.number("getEndMs")
+            ?: value.numberField("endTime", "_endTime", "endMs", "_endMs") ?: times.getOrNull(1) ?: return null
+        val text = value.string("getPureMainText", "getText")
+            ?: value.stringField("pureMainText", "_pureMainText", "text", "_text")
+            ?: strings.takeIf { it.size >= 2 }?.lastOrNull() ?: return null
+        val translation = value.string("getPureSubText", "getTranslation")
+            ?: value.stringField("pureSubText", "_pureSubText", "translation", "_translation")
+            ?: strings.takeIf { it.size >= 2 }?.dropLast(1)?.firstOrNull()
+        val rawCells = value.call("getLyricsCells") ?: value.call("getWords")
+            ?: value.field("lyricsCells") ?: value.field("words")
+            ?: fields.asSequence().filter { Iterable::class.java.isAssignableFrom(it.type) }
+                .mapNotNull { it.read(value).values() }
+                .firstOrNull { cells -> cells.firstOrNull()?.let(::mapWord) != null }
+        val words = rawCells.values()?.mapNotNull(::mapWord).orEmpty()
         return LyricLine(start, end, text, translation, words)
+    }
+
+    private fun mapWord(value: Any?): Word? {
+        value ?: return null
+        val fields = allFields(value.javaClass).filterNot { Modifier.isStatic(it.modifiers) }.toList()
+        val times = fields.filter { it.type == Long::class.javaPrimitiveType || it.type == Long::class.java }
+            .mapNotNull { (it.read(value) as? Number)?.toLong() }
+        val text = value.string("getText") ?: value.stringField("text", "_text")
+            ?: fields.firstNotNullOfOrNull { it.read(value) as? String } ?: return null
+        val start = value.number("getStartTime") ?: value.number("getStartMs")
+            ?: value.numberField("startTime", "_startTime", "startMs", "_startMs") ?: times.getOrNull(0) ?: return null
+        val end = value.number("getEndTime") ?: value.number("getEndMs")
+            ?: value.numberField("endTime", "_endTime", "endMs", "_endMs") ?: times.getOrNull(1) ?: return null
+        return Word(start, end, text)
+    }
+
+    private fun findLyricsLines(roots: List<Any>, maxDepth: Int): List<Any?>? {
+        val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+        var level = roots
+        repeat(maxDepth + 1) { depth ->
+            val next = mutableListOf<Any>()
+            for (value in level) {
+                if (!seen.add(value)) continue
+                value.lineValues()?.let { return it }
+                if (depth == maxDepth || !mayTraverseLyrics(value.javaClass)) continue
+                allFields(value.javaClass).filterNot { Modifier.isStatic(it.modifiers) }.forEach { field ->
+                    field.read(value)?.takeIf { mayTraverseLyrics(it.javaClass) }?.let(next::add)
+                }
+            }
+            level = next
+        }
+        return null
+    }
+
+    private fun Any.lineValues(): List<Any?>? {
+        val named = (call("getLyricsLines") ?: field("lyricsLines") ?: field("_lyricsLines")).values()
+        if (named?.firstOrNull()?.let(::mapLine) != null) return named
+        return allFields(javaClass).filterNot { Modifier.isStatic(it.modifiers) }
+            .mapNotNull { it.read(this).values() }
+            .firstOrNull { lines -> lines.firstOrNull()?.let(::mapLine) != null }
     }
 
     private fun findService(): Any? {
@@ -105,6 +155,8 @@ internal class HostPlaybackProbe {
         ?.let { method -> runCatching { method.trySetAccessible(); method.invoke(this) }.getOrNull() }
 
     private fun Any.number(name: String): Long? = (call(name) as? Number)?.toLong()
+    private fun Any.numberField(vararg names: String): Long? =
+        names.firstNotNullOfOrNull { (field(it) as? Number)?.toLong() }
     private fun Any.string(vararg names: String): String? = names.firstNotNullOfOrNull { call(it) as? String }
     private fun Any.stringField(vararg names: String): String? = names.firstNotNullOfOrNull { field(it) as? String }
     private fun String.localPath(): String = runCatching {
@@ -120,6 +172,12 @@ internal class HostPlaybackProbe {
         return current
     }
     private fun Any.field(name: String): Any? = allFields(javaClass).firstOrNull { it.name == name }?.read(this)
+    private fun Any?.values(): List<Any?>? = when (this) {
+        is Iterable<*> -> toList()
+        is Array<*> -> toList()
+        is Map<*, *> -> values.toList()
+        else -> null
+    }
     private fun Field.read(owner: Any?): Any? = runCatching { trySetAccessible(); get(owner) }.getOrNull()
     private fun allMethods(type: Class<*>): Sequence<Method> = sequence {
         yieldAll(type.methods.asSequence())
@@ -129,6 +187,8 @@ internal class HostPlaybackProbe {
         .flatMap { it.declaredFields.asSequence() }
     private fun mayTraverse(type: Class<*>): Boolean = type.name == PLAYBACK_SERVICE ||
         type.name.startsWith("com.xuncorp.voxzen") || type.name.startsWith("com.xuncorp.spw")
+    private fun mayTraverseLyrics(type: Class<*>): Boolean = mayTraverse(type) ||
+        type.name.startsWith("com.xuncorp.spc.lyrics") || type.name.startsWith("kotlinx.coroutines.flow")
 
     companion object {
         private const val PLAYBACK_SERVICE = "com.xuncorp.voxzen.service.PlaybackService"

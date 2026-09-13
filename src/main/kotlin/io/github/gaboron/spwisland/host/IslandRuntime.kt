@@ -23,7 +23,7 @@ class IslandRuntime : AutoCloseable {
     fun lineChanged(line: io.github.gaboron.spwisland.core.LyricLine?) {
         timeline.lineChanged(line)
         val current = settings.read()
-        if (current.experimentalMultiLine && current.performance.probeHostLyrics && line != null) {
+        if (current.performance.probeHostLyrics && line != null) {
             playbackProbe.readLyrics()?.takeIf { document ->
                 document.any { it.startMs == line.startMs && it.text == line.text }
             }?.let(timeline::lyricsChanged)

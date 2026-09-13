@@ -14,7 +14,11 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
                    actions: PlaybackActions, private val report: (Throwable) -> Unit,
                    private val spectrum: () -> FloatArray = { FloatArray(4) }) : AutoCloseable {
     companion object { private const val DRAG_FRAME_DELAY_MS = 8 }
-    private val window = JWindow().apply {
+    // A persistent overlay is a frame, not an AWT popup (SunAwtWindow).
+    // Give it a distinct native role from tray menus and tooltips.
+    private val window = JFrame().apply {
+        isUndecorated = true
+        defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         name = "Dynamic Lyrics Island for SPW"
         type = Window.Type.UTILITY; isAlwaysOnTop = true
         focusableWindowState = false; isAutoRequestFocus = false
@@ -24,7 +28,7 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private val surface = IslandSurface(panel)
     private val hoverVisibility = IslandHoverVisibility()
     private val native = WindowsOverlay()
-    private val menu = IslandMenu(store, report)
+    private val menu = IslandMenu(store, report, window)
     private var settings = store.read()
     private var nativeAvailable = true
     private var clickThroughApplied: Boolean? = null

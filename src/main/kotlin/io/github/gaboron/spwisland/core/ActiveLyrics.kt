@@ -5,10 +5,14 @@ package io.github.gaboron.spwisland.core
 object ActiveLyrics {
     fun select(snapshot: PlaybackSnapshot, experimental: Boolean): List<LyricLine> {
         if (!experimental || snapshot.lyrics.isEmpty()) return listOfNotNull(snapshot.line)
-        val started = snapshot.lyrics.filter { it.text.isNotBlank() && it.startMs <= snapshot.positionMs }
+        // A line callback can arrive before the coarse host position heartbeat catches up. Treat the
+        // callback's start as reached so simultaneous lines are selected together instead of one-by-one.
+        val reachedPosition = maxOf(snapshot.positionMs, snapshot.line?.startMs ?: 0L)
+        val started = snapshot.lyrics.filter { it.text.isNotBlank() && it.startMs <= reachedPosition }
         if (started.isEmpty()) return listOfNotNull(snapshot.line)
-        val active = started.filter { line -> line.endMs > snapshot.positionMs && line.endMs > line.startMs }
-        return active.ifEmpty { listOf(started.maxBy { it.startMs }) }
+        val active = started.filter { line -> line.endMs > reachedPosition && line.endMs > line.startMs }
+        // During a gap, retain the line that ended last. The latest-started line may have ended earlier.
+        return active.ifEmpty { listOf(started.maxBy { it.endMs }) }
             .sortedWith(compareBy<LyricLine> { it.startMs }.thenBy { it.endMs })
     }
 }
