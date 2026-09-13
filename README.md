@@ -1,6 +1,6 @@
 # Dynamic Lyrics Island for SPW
 
-> 把 SPW 的歌词变成桌面顶部的灵动词岛。
+> 把 SPW 的歌词变成桌面顶部的灵动词岛。QQ 群：1054809039
 
 [![Release](https://img.shields.io/github/v/release/GaBoron/Dynamic-Lyrics-Island-for-SPW?label=Release)](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4?logo=windows)](#系统要求)
