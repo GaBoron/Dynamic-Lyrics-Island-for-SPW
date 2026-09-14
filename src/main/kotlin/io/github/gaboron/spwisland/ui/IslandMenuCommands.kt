@@ -2,17 +2,13 @@
 package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.SettingsStore
-import io.github.gaboron.spwisland.platform.NativePopupMenu
-import io.github.gaboron.spwisland.platform.NativePopupMenu.Entry
-import io.github.gaboron.spwisland.platform.NativePopupMenu.Kind
-
 /** Owns the shared menu model and translates native selections into plugin settings operations. */
 internal class IslandMenuCommands(
     private val store: SettingsStore,
     private val showAbout: () -> Unit,
     private val openSource: () -> Unit
 ) {
-    fun entries(): List<Entry> {
+    fun entries(): List<PopupMenuEntry> {
         val value = store.read()
         return listOf(
             title("常用设置"),
@@ -59,11 +55,12 @@ internal class IslandMenuCommands(
         }
     }
 
-    private fun title(label: String) = Entry(Kind.TITLE, label = label)
-    private fun note(label: String) = Entry(Kind.NOTE, label = label)
-    private fun separator() = Entry(Kind.SEPARATOR)
-    private fun toggle(id: Int, label: String, selected: Boolean) = Entry(Kind.TOGGLE, id, selected, label)
-    private fun action(id: Int, label: String) = Entry(Kind.ACTION, id, label = label)
+    private fun title(label: String) = PopupMenuEntry(PopupMenuKind.TITLE, label = label)
+    private fun note(label: String) = PopupMenuEntry(PopupMenuKind.NOTE, label = label)
+    private fun separator() = PopupMenuEntry(PopupMenuKind.SEPARATOR)
+    private fun toggle(id: Int, label: String, selected: Boolean) =
+        PopupMenuEntry(PopupMenuKind.TOGGLE, id, selected, label)
+    private fun action(id: Int, label: String) = PopupMenuEntry(PopupMenuKind.ACTION, id, label = label)
 
     private companion object {
         const val LOW_PERFORMANCE = 101

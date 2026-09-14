@@ -5,6 +5,7 @@ package io.github.gaboron.spwisland.ui
 import io.github.gaboron.spwisland.core.*
 import java.awt.*
 import javax.swing.*
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 interface PlaybackActions { fun previous(); fun toggle(); fun next(); fun seek(positionMs: Long) {} }
@@ -16,8 +17,9 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
     var anchor = IslandAnchor.TOP_CENTER
     var snapshot = PlaybackSnapshot(null, null, 0, false, PlaybackStatus.IDLE)
     var expanded = false
-    var expandUpward = false
     var expansion: Double? = null
+    var animatedWidth = 280.0
+    var animatedHeight = 58.0
     var transition = 1.0
     var outgoing: PlaybackSnapshot? = null
     val progress = PlaybackProgress(::seekPlayback).also { add(it) }
@@ -56,18 +58,25 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
         IslandLyricsLayout(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), false).height
     override fun doLayout() {
         progress.update(snapshot)
-        val controlsVisible = expanded && (expansion ?: 1.0) > .95
+        val reveal = expansion ?: if (expanded) 1.0 else 0.0
+        val controlsVisible = IslandExpandedContentTransition.visible(reveal)
+        val lyricAreaBottom = (height - reveal * IslandTextBlock.EXPANDED_HEIGHT).roundToInt()
         progress.isVisible = controlsVisible
         progress.setBounds((width - PlaybackProgress.FIXED_WIDTH) / 2,
-            if (expandUpward) 10 else height - 38, PlaybackProgress.FIXED_WIDTH, 28)
+            lyricAreaBottom + 60, PlaybackProgress.FIXED_WIDTH, 28)
         progress.foreground = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric
         val buttons = listOf(previous, play, next)
         buttons.forEachIndexed { index, button ->
             button.isVisible = controlsVisible
-            button.setBounds(width / 2 - 81 + index * 56, if (expandUpward) 42 else height - 72, 50, 30)
+            button.setBounds(width / 2 - 81 + index * 56, lyricAreaBottom + 26, 50, 30)
         }
         play.icon = if (snapshot.playing) PlaybackIcon.PAUSE else PlaybackIcon.PLAY
         play.toolTipText = if (snapshot.playing) "暂停" else "播放"
+    }
+    override fun paintChildren(graphics: Graphics) {
+        val reveal = expansion ?: if (expanded) 1.0 else 0.0
+        val layer = IslandExpandedContentTransition.layer(graphics, reveal) ?: return
+        try { super.paintChildren(layer) } finally { layer.dispose() }
     }
     override fun paintComponent(graphics: Graphics) {
         val g = graphics.create() as Graphics2D
@@ -83,49 +92,72 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val shape = IslandGeometry.silhouette(width, height, settings.notch, settings.cornerRoundness, anchor)
             val palette = IslandPalette.from(settings, snapshot.metadata.coverRgb)
             val background = palette.background
+            val reveal = expansion ?: if (expanded) 1.0 else 0.0
             g.color = Color(background.red, background.green, background.blue, settings.opacity * 255 / 100)
             g.fill(shape)
+            IslandBackgroundProgress.draw(g, shape, width, height, anchor, snapshot, settings, palette, reveal)
             g.color = Color(255, 255, 255, 19); g.draw(shape)
-            g.clip(shape)
+            val contentWidth = animatedWidth.toFloat()
+            val contentHeight = animatedHeight.toFloat()
+            val contentX = when (anchor.horizontal) {
+                HorizontalAnchor.LEFT -> 0f
+                HorizontalAnchor.CENTER -> (width / 2).toFloat() - contentWidth / 2f
+                HorizontalAnchor.RIGHT -> width - contentWidth
+            }
+            val contentY = when (anchor.vertical) {
+                VerticalAnchor.TOP -> 0f
+                VerticalAnchor.CENTER -> (height / 2).toFloat() - contentHeight / 2f
+                VerticalAnchor.BOTTOM -> height - contentHeight
+            }
+            g.translate(contentX.toDouble(), contentY.toDouble())
+            g.clip(java.awt.geom.AffineTransform.getTranslateInstance(
+                -contentX.toDouble(), -contentY.toDouble()
+            ).createTransformedShape(shape))
             val block = IslandTextBlock(snapshot, settings)
-            val reveal = expansion ?: if (expanded) 1.0 else 0.0
-            val lyricAreaHeight = (height - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
-            val lyricAreaTop = if (expandUpward) height - lyricAreaHeight else 0f
+            val lyricAreaHeight = (contentHeight - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
+            val lyricAreaTop = 0f
             val animation = if (settings.performance.animateLayout) transition else 1.0
             val sidePadding = (IslandTextBlock.EXPANDED_SIDE_PADDING * reveal).toFloat()
             val textInset = IslandTextBlock.INSET + sidePadding
             IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
-                bands, (textInset - 24).toInt(), (lyricAreaTop + lyricAreaHeight / 2).toInt(),
+                bands, textInset - 24f, lyricAreaTop + lyricAreaHeight / 2f,
                 palette.spectrum)
             val lyrics = g.create() as Graphics2D
             try {
                 lyrics.translate(0.0, lyricAreaTop.toDouble())
-                IslandLyricsPainter.draw(lyrics, snapshot, outgoing, settings, width,
+                IslandLyricsPainter.draw(lyrics, snapshot, outgoing, settings, contentWidth,
                     lyricAreaHeight, animation, textInset)
             } finally { lyrics.dispose() }
-            drawStatus(g, (lyricAreaTop + lyricAreaHeight / 2).toInt(), (width - textInset + 24).toInt())
-            if (expanded && reveal > .95) {
-                val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist).filter { it.isNotBlank() }.joinToString(" · ")
-                    .ifBlank { "在 SPW 中播放音乐" }
-                LyricPainter.draw(g, label, emptyList(), 0, 42f + sidePadding,
-                    if (expandUpward) 81f else height - 81f,
-                    width - 84f - sidePadding * 2,
-                    block.mainFont.deriveFont(12f), false, Color(147, 156, 174))
+            drawStatus(g, lyricAreaTop + lyricAreaHeight / 2f, contentWidth - textInset + 24f)
+            IslandExpandedContentTransition.layer(g, reveal)?.let { info ->
+                try {
+                    val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist)
+                        .filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "在 SPW 中播放音乐" }
+                    LyricPainter.draw(info, label, emptyList(), 0, 42f + sidePadding,
+                        lyricAreaHeight + 17f,
+                        contentWidth - 84f - sidePadding * 2,
+                        block.mainFont.deriveFont(12f), false, Color(147, 156, 174))
+                } finally { info.dispose() }
             }
         } finally { g.dispose() }
     }
-    private fun drawStatus(g: Graphics2D, centerY: Int, centerX: Int) {
+    private fun drawStatus(g: Graphics2D, centerY: Float, centerX: Float) {
         if (snapshot.line == null && snapshot.lyrics.isEmpty() && snapshot.playing) {
             for (i in 0..2) {
                 val a = if (settings.performance.animateLayout) {
                     (150 + 90 * sin(snapshot.positionMs / 350.0 - i)).toInt()
                 } else 150
-                g.color = Color(190, 204, 221, a); g.fillOval(centerX - 8 + i * 7, centerY - 2, 4, 4)
+                g.color = Color(190, 204, 221, a)
+                g.fill(java.awt.geom.Ellipse2D.Float(centerX - 8f + i * 7f, centerY - 2f, 4f, 4f))
             }
         } else {
             g.color = Color(115, 131, 149)
-            if (snapshot.playing) g.fillOval(centerX - 3, centerY - 3, 6, 6)
-            else { g.fillRoundRect(centerX - 6, centerY - 5, 3, 10, 2, 2); g.fillRoundRect(centerX, centerY - 5, 3, 10, 2, 2) }
+            if (snapshot.playing) {
+                g.fill(java.awt.geom.Ellipse2D.Float(centerX - 3f, centerY - 3f, 6f, 6f))
+            } else {
+                g.fill(java.awt.geom.RoundRectangle2D.Float(centerX - 6f, centerY - 5f, 3f, 10f, 2f, 2f))
+                g.fill(java.awt.geom.RoundRectangle2D.Float(centerX, centerY - 5f, 3f, 10f, 2f, 2f))
+            }
         }
     }
 }

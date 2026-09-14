@@ -45,7 +45,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         // Native sliders use floating-point values. Persist whole-number settings as integers
         // so reopening SPW does not inherit noisy fractional values from the slider thumb.
         if (!Files.exists(config.getConfigPath()) || !config.reload()) return
-        val migrated = normalizeIntegerSettings()
+        val migrated = normalizeIntegerSettings() or normalizeBackgroundProgressSetting()
         if (migrated) check(config.save()) { "词岛旧设置迁移失败，请检查 SPW 配置目录权限。" }
     }
     private fun decode(): IslandSettings = IslandSettings(
@@ -60,6 +60,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         cornerRoundness = number("corner_roundness", 60, 0, 100),
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
+        backgroundProgress = backgroundProgressMode(),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
         fixedWidth = config.get("fixed_width", false),
         leadingContent = when (config.get("leading_content", "spectrum")) {
@@ -83,7 +84,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             if (bytes.isEmpty() || fingerprint?.contentEquals(bytes) == true) return
             // Failed/partial writes must not replace the last usable snapshot with defaults.
             if (!config.reload()) return
-            val normalized = normalizeIntegerSettings()
+            val normalized = normalizeIntegerSettings() or normalizeBackgroundProgressSetting()
             if (normalized && !config.save()) return
             val value = decode()
             fingerprint = if (normalized) Files.readAllBytes(config.getConfigPath()) else bytes
@@ -100,6 +101,24 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
 
     private fun optionalNumber(key: String): Int? =
         number(key, Int.MIN_VALUE, Int.MIN_VALUE, Int.MAX_VALUE).takeUnless { it == Int.MIN_VALUE }
+
+    private fun backgroundProgressMode(): BackgroundProgressMode =
+        when (val value = config.get<Any>("background_progress", "off")) {
+            true -> BackgroundProgressMode.FILL
+            is String -> when (value) {
+                "fill" -> BackgroundProgressMode.FILL
+                "top_line" -> BackgroundProgressMode.TOP_LINE
+                else -> BackgroundProgressMode.OFF
+            }
+            else -> BackgroundProgressMode.OFF
+        }
+
+    private fun normalizeBackgroundProgressSetting(): Boolean {
+        val value = config.get<Any>("background_progress", "off")
+        if (value !is Boolean) return false
+        config.set("background_progress", if (value) "fill" else "off")
+        return true
+    }
 
     private fun normalizeIntegerSettings(): Boolean {
         var changed = false

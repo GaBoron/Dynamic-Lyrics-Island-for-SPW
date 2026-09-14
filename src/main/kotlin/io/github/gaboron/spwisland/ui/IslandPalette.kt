@@ -14,7 +14,7 @@ data class IslandPalette(val lyric: Color, val background: Color, val spectrum: 
             return IslandPalette(
                 if (settings.lyricCoverColor) bright ?: Color.WHITE else Color.WHITE,
                 if (settings.backgroundCoverColor) dark ?: Color(7, 8, 12) else Color(7, 8, 12),
-                if (settings.spectrumCoverColor) bright ?: Color(132, 216, 188) else Color(132, 216, 188))
+                if (settings.spectrumCoverColor) bright ?: Color.WHITE else Color.WHITE)
         }
     }
 }

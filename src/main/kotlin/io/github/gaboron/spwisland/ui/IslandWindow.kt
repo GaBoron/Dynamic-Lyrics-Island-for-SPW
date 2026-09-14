@@ -43,7 +43,6 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
     private var width = 280.0
     private var height = 58.0
     private var expansion = 0.0
-    private var hoverWidth = 0
 
     private var canvasWidth = 0
     private var canvasHeight = 0
@@ -151,17 +150,17 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
             (panel.transition + dt / .65).coerceAtMost(1.0)
         } else 1.0
         val desired = panel.desiredSize(screen.width)
-        if (panel.expanded) {
-            hoverWidth = maxOf(hoverWidth, width.roundToInt(), desired.width)
-            desired.width = hoverWidth.coerceAtMost(minOf(settings.maxWidth, screen.width))
-        } else hoverWidth = 0
         val factor = if (performance.animateLayout) 1 - kotlin.math.exp(-dt * 15) else 1.0
-        expansion += ((if (panel.expanded) 1.0 else 0.0) - expansion) * factor
+        val expansionTarget = if (panel.expanded) 1.0 else 0.0
+        expansion += (expansionTarget - expansion) * factor
+        if (abs(expansion - expansionTarget) < .0001) expansion = expansionTarget
         panel.expansion = expansion
         width += (desired.width - width) * factor
         height += (desired.height - height) * factor
-        if (abs(width - desired.width) < .5) width = desired.width.toDouble()
-        if (abs(height - desired.height) < .5) height = desired.height.toDouble()
+        if (abs(width - desired.width) < .01) width = desired.width.toDouble()
+        if (abs(height - desired.height) < .01) height = desired.height.toDouble()
+        panel.animatedWidth = width
+        panel.animatedHeight = height
         val currentWidth = width.roundToInt()
         val currentHeight = height.roundToInt()
         val position = anchoredPosition(screen, device.iDstring, currentWidth, currentHeight)
@@ -179,7 +178,6 @@ class IslandWindow(private val timeline: PlaybackTimeline, private val store: Se
         if (window.bounds != bounds) window.bounds = bounds
         if (resized) window.validate()
         surface.setSize(bounds.width, bounds.height)
-        panel.expandUpward = placementAnchor.vertical == VerticalAnchor.BOTTOM
         panel.setBounds(islandBounds.x - bounds.x, islandBounds.y - bounds.y, islandBounds.width, islandBounds.height)
         panel.doLayout()
         if (nativeAvailable && now >= nextScreenCheck) {

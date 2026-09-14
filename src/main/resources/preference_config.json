@@ -160,6 +160,23 @@
           "summary": "从本地音频内嵌封面或同目录 cover/folder 图片取色，无封面时使用默认颜色。"
         },
         {
+          "type": "list",
+          "key": "background_progress",
+          "title": "背景播放进度样式",
+          "entries": [
+            "关闭",
+            "背景注水",
+            "顶部细线"
+          ],
+          "entry_values": [
+            "off",
+            "fill",
+            "top_line"
+          ],
+          "default_value": "off",
+          "summary": "顶部细线仿照胶囊上沿进度设计；低性能模式下关闭动态背景进度。"
+        },
+        {
           "type": "switch",
           "key": "spectrum_cover_color",
           "title": "频谱使用封面颜色",

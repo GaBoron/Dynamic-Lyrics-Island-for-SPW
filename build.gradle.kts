@@ -21,9 +21,8 @@ dependencies {
     metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
 }
 tasks.processResources {
-    dependsOn("buildSpectrum", "buildMenuPopup")
+    dependsOn("buildSpectrum")
     from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
-    from(layout.buildDirectory.file("native/spw-menu.exe")) { into("native") }
     inputs.property("projectUrl", projectUrl)
     filesMatching("project.properties") { expand("projectUrl" to projectUrl.get()) }
 }
@@ -60,20 +59,6 @@ tasks.register<Exec>("buildSpectrum") {
     args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
         file("native/AudioInterop.cs").absolutePath, file("native/Spectrum.cs").absolutePath,
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
-}
-
-tasks.register<Exec>("buildMenuPopup") {
-    val output = layout.buildDirectory.file("native/spw-menu.exe")
-    val framework = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319"
-    inputs.files(fileTree("native") { include("Menu*.cs") })
-    outputs.file(output)
-    doFirst { output.get().asFile.parentFile.mkdirs() }
-    executable = "$framework/csc.exe"
-    args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
-        "/reference:$framework/WPF/PresentationCore.dll", "/reference:$framework/WPF/PresentationFramework.dll",
-        "/reference:$framework/WPF/WindowsBase.dll", "/reference:$framework/System.Xaml.dll",
-        file("native/MenuProtocol.cs").absolutePath,
-        file("native/MenuBackdrop.cs").absolutePath, file("native/MenuPopup.cs").absolutePath)
 }
 
 tasks.register<Zip>("plugin") {

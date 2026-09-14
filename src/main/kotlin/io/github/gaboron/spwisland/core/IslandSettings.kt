@@ -2,6 +2,7 @@
 package io.github.gaboron.spwisland.core
 
 enum class LeadingContent { SPECTRUM, COVER }
+enum class BackgroundProgressMode { OFF, FILL, TOP_LINE }
 
 data class IslandSettings(
     val enabled: Boolean = true,
@@ -17,6 +18,7 @@ data class IslandSettings(
     val cornerRoundness: Int = 60,
     val lyricCoverColor: Boolean = false,
     val backgroundCoverColor: Boolean = false,
+    val backgroundProgress: BackgroundProgressMode = BackgroundProgressMode.OFF,
     val spectrumCoverColor: Boolean = false,
     val fixedWidth: Boolean = false,
     val leadingContent: LeadingContent = LeadingContent.SPECTRUM,

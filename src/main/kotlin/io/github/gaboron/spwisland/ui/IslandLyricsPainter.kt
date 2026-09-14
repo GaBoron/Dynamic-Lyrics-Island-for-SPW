@@ -7,7 +7,7 @@ import java.awt.geom.Rectangle2D
 
 object IslandLyricsPainter {
     fun draw(g: Graphics2D, current: PlaybackSnapshot, previous: PlaybackSnapshot?, settings: IslandSettings,
-             width: Int, height: Float, transition: Double, inset: Float = IslandTextBlock.INSET) {
+             width: Float, height: Float, transition: Double, inset: Float = IslandTextBlock.INSET) {
         val progress = if (transition >= 1) 1.0 else AmllMotion.line(transition * .65)
         val outgoingAlpha = (1 - transition * 3).coerceIn(0.0, 1.0).toFloat()
         val currentRows = IslandLyricsLayout(current, settings).rows(height)
@@ -33,14 +33,14 @@ object IslandLyricsPainter {
         }
     }
     private fun row(g: Graphics2D, snapshot: PlaybackSnapshot, settings: IslandSettings,
-                    row: IslandLyricsLayout.Row, width: Int, height: Float,
+                    row: IslandLyricsLayout.Row, width: Float, height: Float,
                     offset: Double, alpha: Float, scale: Double, inset: Float) {
         val block = row.block
         val line = block.line
         val time = snapshot.positionMs + settings.offsetMs
         val copy = g.create() as Graphics2D
         try {
-            copy.clip(Rectangle2D.Float(inset - 8, 2f, width - inset * 2 + 16, height - 4))
+            copy.clip(Rectangle2D.Float(inset - 8, 2f, width - inset * 2 + 16, height - 4f))
             copy.composite = AlphaComposite.SrcOver.derive(alpha)
             copy.translate(width / 2.0, height / 2.0 + offset)
             copy.scale(scale, scale); copy.translate(-width / 2.0, -height / 2.0)
