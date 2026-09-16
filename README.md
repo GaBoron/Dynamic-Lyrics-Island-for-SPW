@@ -37,6 +37,15 @@ flowchart LR
 
 旧版 Windows 仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用系统自带的 .NET Framework 4.x。
 
+### 适配平台
+
+| 平台 | 适配情况 |
+| --- | --- |
+| Windows | 完整支持所有功能 |
+| Linux | 在适配计划中 |
+| macOS | 暂无计划 |
+| Android / iOS / HarmonyOS| Salt Player 暂不支持插件功能 |
+
 ## 🖱️ 常用操作
 
 | 操作 | 效果 |
