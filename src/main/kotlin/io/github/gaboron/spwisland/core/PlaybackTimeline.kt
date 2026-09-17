@@ -2,7 +2,9 @@
 package io.github.gaboron.spwisland.core
 
 /** Serializes host callbacks and interpolates the host's one-second clock on a monotonic clock. */
-class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
+fun interface PlaybackSource { fun snapshot(): PlaybackSnapshot }
+
+class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : PlaybackSource {
     companion object {
         private const val SEEK_ACK_WINDOW_NS = 2_500_000_000L
         private const val SEEK_ACK_TOLERANCE_MS = 2_000L
@@ -100,7 +102,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) {
             if (value == PlaybackStatus.IDLE) { track = null; position = 0; metadata = TrackMetadata(); generation++ }
         }
     }
-    @Synchronized fun snapshot(): PlaybackSnapshot {
+    @Synchronized override fun snapshot(): PlaybackSnapshot {
         val now = currentPosition()
         return PlaybackSnapshot(track, line, now, playing && status == PlaybackStatus.READY, status, metadata,
             mergeLyrics(documentLyrics, callbackLyrics))

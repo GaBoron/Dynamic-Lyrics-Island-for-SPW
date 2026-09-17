@@ -4,6 +4,7 @@ package io.github.gaboron.spwisland.host
 
 import com.xuncorp.spw.workshop.api.config.ConfigManager
 import com.xuncorp.spw.workshop.api.config.ConfigHelper
+import com.sun.jna.Platform
 import io.github.gaboron.spwisland.core.*
 import java.util.function.Consumer
 import java.nio.file.Files
@@ -53,8 +54,9 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         karaoke = config.get("karaoke", true),
         experimentalMultiLine = config.get("experimental_multi_line", false),
         hidePaused = config.get("hide_paused", false),
-        hideFullscreen = config.get("hide_fullscreen", true), clickThrough = config.get("click_through", false),
-        autoHideOnHover = config.get("auto_hide_on_hover", false),
+        hideFullscreen = Platform.isWindows() && config.get("hide_fullscreen", true),
+        clickThrough = Platform.isWindows() && config.get("click_through", false),
+        autoHideOnHover = Platform.isWindows() && config.get("auto_hide_on_hover", false),
         // Keep the original key so existing users retain their enabled setting after the rename.
         lowPerformance = config.get("reduced_motion", false), notch = config.get("shape", "pill") == "notch",
         cornerRoundness = number("corner_roundness", 60, 0, 100),
@@ -63,11 +65,11 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         backgroundProgress = backgroundProgressMode(),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
         fixedWidth = config.get("fixed_width", false),
-        leadingContent = when (config.get("leading_content", "spectrum")) {
+        leadingContent = if (!Platform.isWindows()) LeadingContent.COVER else when (config.get("leading_content", "spectrum")) {
             "cover" -> LeadingContent.COVER
             else -> LeadingContent.SPECTRUM
         },
-        fontFamily = config.get("font_family", "Microsoft YaHei UI").take(100).ifBlank { "Dialog" },
+        fontFamily = configuredFontFamily(),
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
@@ -77,6 +79,12 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         legacyCenterX = optionalNumber("center_x"),
         legacyTop = optionalNumber("top")
     )
+    private fun configuredFontFamily(): String {
+        val platformDefault = if (Platform.isWindows()) "Microsoft YaHei UI" else "Dialog"
+        val configured = config.get("font_family", platformDefault).take(100).ifBlank { platformDefault }
+        // The old cross-platform default should not force a missing Windows font on Linux.
+        return if (!Platform.isWindows() && configured == "Microsoft YaHei UI") "Dialog" else configured
+    }
     internal fun refresh() {
         val notify = synchronized(lock) {
             if (closed || !Files.exists(config.getConfigPath())) return

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.gaboron.spwisland.ui
 
+import com.sun.jna.Platform
 import io.github.gaboron.spwisland.core.SettingsStore
 /** Owns the shared menu model and translates native selections into plugin settings operations. */
 internal class IslandMenuCommands(
@@ -10,29 +11,31 @@ internal class IslandMenuCommands(
 ) {
     fun entries(): List<PopupMenuEntry> {
         val value = store.read()
-        return listOf(
-            title("常用设置"),
-            toggle(LOW_PERFORMANCE, "低性能模式", value.lowPerformance),
-            toggle(SHAPE, "顶部刘海", value.notch),
-            toggle(TRANSLATION, "显示翻译", value.translation),
-            toggle(KARAOKE, "逐字高亮", value.karaoke),
-            toggle(CLICK_THROUGH, "鼠标穿透", value.clickThrough),
-            toggle(AUTO_HIDE, "悬停自动隐藏", value.autoHideOnHover),
-            separator(),
-            title("显示设置"),
-            toggle(ENABLED, "显示词岛", value.enabled),
-            toggle(MULTI_LINE, "实验性多行歌词", value.experimentalMultiLine),
-            toggle(HIDE_FULLSCREEN, "全屏时隐藏", value.hideFullscreen),
-            toggle(HIDE_PAUSED, "暂停时隐藏", value.hidePaused),
-            separator(),
-            title("快捷操作"),
-            action(RECOVER, "解除鼠标穿透并显示"),
-            action(RESET_POSITION, "重置位置"),
-            note("更多设置请前往 SPW 插件配置"),
-            separator(),
-            action(ABOUT, "关于与许可"),
-            action(SOURCE, "项目源代码（GitHub）")
-        )
+        return buildList {
+            add(title("常用设置"))
+            add(toggle(LOW_PERFORMANCE, "低性能模式", value.lowPerformance))
+            add(toggle(SHAPE, "顶部刘海", value.notch))
+            add(toggle(TRANSLATION, "显示翻译", value.translation))
+            add(toggle(KARAOKE, "逐字高亮", value.karaoke))
+            if (Platform.isWindows()) {
+                add(toggle(CLICK_THROUGH, "鼠标穿透", value.clickThrough))
+                add(toggle(AUTO_HIDE, "悬停自动隐藏", value.autoHideOnHover))
+            }
+            add(separator())
+            add(title("显示设置"))
+            add(toggle(ENABLED, "显示词岛", value.enabled))
+            add(toggle(MULTI_LINE, "实验性多行歌词", value.experimentalMultiLine))
+            if (Platform.isWindows()) add(toggle(HIDE_FULLSCREEN, "全屏时隐藏", value.hideFullscreen))
+            add(toggle(HIDE_PAUSED, "暂停时隐藏", value.hidePaused))
+            add(separator())
+            add(title("快捷操作"))
+            add(action(RECOVER, if (Platform.isWindows()) "解除鼠标穿透并显示" else "显示词岛"))
+            add(action(RESET_POSITION, "重置位置"))
+            add(note("更多设置请前往 SPW 插件配置"))
+            add(separator())
+            add(action(ABOUT, "关于与许可"))
+            add(action(SOURCE, "项目源代码（GitHub）"))
+        }
     }
 
     fun execute(command: Int) {

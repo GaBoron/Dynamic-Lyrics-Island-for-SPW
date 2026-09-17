@@ -8,7 +8,7 @@ enum class VerticalAnchor { TOP, CENTER, BOTTOM }
 data class IslandAnchor(
     val horizontal: HorizontalAnchor,
     val vertical: VerticalAnchor
-) {
+) : java.io.Serializable {
     val storageName: String = "${vertical.name.lowercase()}_${horizontal.name.lowercase()}"
 
     companion object {

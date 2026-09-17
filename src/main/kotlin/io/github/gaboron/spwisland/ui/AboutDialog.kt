@@ -37,6 +37,7 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
 
     private fun createWindow(colors: Palette): JDialog {
         val dialog = JDialog(owner, "关于与许可", Dialog.ModalityType.MODELESS).apply {
+            setIconImage(ApplicationIdentity.icon)
             isUndecorated = true
             isAlwaysOnTop = true
             background = Color(0, 0, 0, 0)
@@ -94,14 +95,14 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
             isOpaque = false
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = EmptyBorder(1, 15, 0, 0)
-            add(JLabel("Dynamic Lyrics Island").apply {
+            add(JLabel(ApplicationIdentity.NAME).apply {
                 foreground = colors.text
-                font = Font("Microsoft YaHei UI", Font.BOLD, 20)
+                font = SystemUiFont.derive(Font.BOLD, 20f)
             })
             add(Box.createVerticalStrut(3))
             add(JLabel("关于与许可 · for SPW").apply {
                 foreground = colors.muted
-                font = Font("Microsoft YaHei UI", Font.PLAIN, 12)
+                font = SystemUiFont.derive(Font.PLAIN, 12f)
             })
         }, BorderLayout.CENTER)
         add(CloseButton(colors).apply { addActionListener { dialog.isVisible = false } }, BorderLayout.EAST)
@@ -116,7 +117,7 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
             columns = 42
             lineWrap = false
             foreground = colors.muted
-            font = Font("Microsoft YaHei UI", Font.PLAIN, 12)
+            font = SystemUiFont.derive(Font.PLAIN, 12f)
             border = null
         }
         return AboutCard(colors).apply {
@@ -125,7 +126,7 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
             alignmentX = Component.LEFT_ALIGNMENT
             add(JLabel(title).apply {
                 foreground = colors.text
-                font = Font("Microsoft YaHei UI", Font.BOLD, 13)
+                font = SystemUiFont.derive(Font.BOLD, 13f)
             }, BorderLayout.NORTH)
             add(text, BorderLayout.CENTER)
             val naturalHeight = preferredSize.height
@@ -158,7 +159,7 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
         border = EmptyBorder(0, 28, 22, 28)
         add(JLabel("在适用法律允许范围内不提供担保，可按对应许可证再分发。").apply {
             foreground = colors.muted
-            font = Font("Microsoft YaHei UI", Font.PLAIN, 11)
+            font = SystemUiFont.derive(Font.PLAIN, 11f)
             alignmentX = Component.LEFT_ALIGNMENT
         })
         add(Box.createVerticalStrut(12))
@@ -306,7 +307,7 @@ internal class AboutDialog(private val owner: Window, private val report: (Throw
             isContentAreaFilled = false
             isBorderPainted = false
             foreground = if (primary) colors.background else colors.text
-            font = Font("Microsoft YaHei UI", Font.PLAIN, 12)
+            font = SystemUiFont.derive(Font.PLAIN, 12f)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
         override fun paintComponent(graphics: Graphics) {

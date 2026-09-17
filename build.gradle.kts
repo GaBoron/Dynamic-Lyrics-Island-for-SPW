@@ -1,5 +1,6 @@
 // Build layout adapted from Moriafly/spw-workshop-api (Apache-2.0).
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.internal.os.OperatingSystem
 
 plugins {
     kotlin("jvm") version "2.3.0"
@@ -10,9 +11,13 @@ java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
 val workshop = "com.github.Moriafly:spw-workshop-api:0.1.0-dev20"
 val projectUrl = providers.gradleProperty("projectUrl")
+val currentOs = OperatingSystem.current()
+val isWindows = currentOs.isWindows
+val isLinux = currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
 dependencies {
     compileOnly(kotlin("stdlib"))
+    testImplementation(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
     compileOnly("org.pf4j:pf4j:3.12.0")
     implementation("net.java.dev.jna:jna:5.17.0")
@@ -21,8 +26,13 @@ dependencies {
     metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
 }
 tasks.processResources {
-    dependsOn("buildSpectrum")
-    from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
+    if (isWindows) {
+        dependsOn("buildSpectrum")
+        from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
+    } else if (isLinux) {
+        exclude { it.file == file("src/main/resources/preference_config.json") }
+        from("src/linux/resources")
+    }
     inputs.property("projectUrl", projectUrl)
     filesMatching("project.properties") { expand("projectUrl" to projectUrl.get()) }
 }
@@ -54,6 +64,10 @@ tasks.register<Exec>("buildSpectrum") {
     val output = layout.buildDirectory.file("native/spw-spectrum.exe")
     inputs.files(fileTree("native") { include("*.cs") })
     outputs.file(output)
+    onlyIf {
+        if (!isWindows) logger.lifecycle("Skipping the Windows spectrum helper on ${currentOs.name}")
+        isWindows
+    }
     doFirst { output.get().asFile.parentFile.mkdirs() }
     executable = "${System.getenv("WINDIR") ?: "C:/Windows"}/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
     args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
@@ -61,13 +75,45 @@ tasks.register<Exec>("buildSpectrum") {
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
 }
 
-tasks.register<Zip>("plugin") {
+fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) = tasks.register<Zip>(taskName) {
     dependsOn(tasks.jar, "sourceArchive")
-    archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}.zip")
+    onlyIf {
+        if (!enabled) logger.lifecycle("$taskName must run on a $platform host")
+        enabled
+    }
+    archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-$platform-x64.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     into("classes") { from(tasks.jar.map { zipTree(it.archiveFile) }) }
     into("lib") { from(configurations.runtimeClasspath) }
     into("licenses") { from("licenses") }
     into("source") { from(tasks.named("sourceArchive")); from(metadataSources) }
     from("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md")
+}
+
+val pluginWindows = registerPluginArchive("pluginWindows", "windows", isWindows)
+val pluginLinux = registerPluginArchive("pluginLinux", "linux", isLinux)
+
+tasks.register("plugin") {
+    group = "build"
+    description = "Builds the plugin archive for the current host platform."
+    dependsOn(if (isWindows) pluginWindows else pluginLinux)
+    doFirst {
+        check(isWindows || isLinux) { "Only Windows and Linux plugin archives are supported" }
+    }
+}
+
+// Deliberately opt-in: creates temporary windows and sends desktop mouse input.
+tasks.register<JavaExec>("linuxDesktopCheck") {
+    group = "verification"
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("io.github.gaboron.spwisland.ui.LinuxDesktopCheck")
+}
+
+tasks.register<JavaExec>("linuxProcessCheck") {
+    group = "verification"
+    dependsOn(tasks.testClasses)
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("io.github.gaboron.spwisland.ui.LinuxProcessCheck")
+    providers.gradleProperty("testRuntime").orNull?.let { systemProperty("spwisland.test.runtime", it) }
 }
