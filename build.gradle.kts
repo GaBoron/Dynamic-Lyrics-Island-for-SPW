@@ -12,8 +12,12 @@ kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_21) } }
 val workshop = "com.github.Moriafly:spw-workshop-api:0.1.0-dev20"
 val projectUrl = providers.gradleProperty("projectUrl")
 val currentOs = OperatingSystem.current()
-val isWindows = currentOs.isWindows
-val isLinux = currentOs.isLinux
+val targetPlatform = providers.gradleProperty("targetPlatform").orNull
+require(targetPlatform == null || targetPlatform == "windows" || targetPlatform == "linux") {
+    "targetPlatform must be windows or linux"
+}
+val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
+val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
 dependencies {
     compileOnly(kotlin("stdlib"))
