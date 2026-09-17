@@ -37,6 +37,8 @@ flowchart LR
 
 旧版 Windows 仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用系统自带的 .NET Framework 4.x。
 
+> 若有自动获取逐字歌词需求可前往 [GaBoron/SPW-Lyrics](https://github.com/GaBoron/SPW-Lyrics)
+
 ### 适配平台
 
 | 平台 | 适配情况 |
