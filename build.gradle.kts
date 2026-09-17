@@ -17,7 +17,6 @@ val isLinux = currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
 dependencies {
     compileOnly(kotlin("stdlib"))
-    testImplementation(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
     compileOnly("org.pf4j:pf4j:3.12.0")
     implementation("net.java.dev.jna:jna:5.17.0")
@@ -102,18 +101,3 @@ tasks.register("plugin") {
     }
 }
 
-// Deliberately opt-in: creates temporary windows and sends desktop mouse input.
-tasks.register<JavaExec>("linuxDesktopCheck") {
-    group = "verification"
-    dependsOn(tasks.testClasses)
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.github.gaboron.spwisland.ui.LinuxDesktopCheck")
-}
-
-tasks.register<JavaExec>("linuxProcessCheck") {
-    group = "verification"
-    dependsOn(tasks.testClasses)
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("io.github.gaboron.spwisland.ui.LinuxProcessCheck")
-    providers.gradleProperty("testRuntime").orNull?.let { systemProperty("spwisland.test.runtime", it) }
-}
