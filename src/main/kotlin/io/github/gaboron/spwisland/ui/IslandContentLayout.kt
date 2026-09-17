@@ -27,7 +27,7 @@ data class IslandContentLayout private constructor(
             PlaybackProgress.FIXED_WIDTH + EXPANDED_SIDE_SPACE * 2 + (EXPANDED_EDGE_PADDING * 2).toInt()
         } else 240
 
-        fun from(mainLineHeight: Float, expansion: Float): IslandContentLayout {
+        fun from(mainLineHeight: Float, expansion: Float, showSides: Boolean = true): IslandContentLayout {
             val leadingSize = mainLineHeight.coerceAtLeast(1f)
             val minimumHeight = leadingSize + VERTICAL_PADDING * 2
             val radius = minimumHeight / 2f
@@ -35,10 +35,11 @@ data class IslandContentLayout private constructor(
                 (radius - VERTICAL_PADDING)).coerceAtLeast(0f))
             val outerPadding = maxOf(MINIMUM_EDGE_PADDING, curveInset + CURVED_EDGE_CLEARANCE) +
                 EXPANDED_EDGE_PADDING * expansion.coerceIn(0f, 1f)
+            val textInset = if (showSides) outerPadding + leadingSize + LEADING_TEXT_GAP else outerPadding
             return IslandContentLayout(
                 leadingSize = leadingSize,
                 leadingCenterX = outerPadding + leadingSize / 2f,
-                textInset = outerPadding + leadingSize + LEADING_TEXT_GAP,
+                textInset = textInset,
                 infoInset = outerPadding + INFO_EDGE_OFFSET,
                 minimumLyricHeight = ceil(minimumHeight).toInt()
             )

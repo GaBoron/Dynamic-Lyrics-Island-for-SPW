@@ -161,7 +161,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
         val clickThrough = settings.clickThrough && native.supportsClickThrough
         val snap = timeline.snapshot()
         panel.settings = settings; panel.snapshot = snap
-        val levels = if (!snap.playing || settings.leadingContent != LeadingContent.SPECTRUM) FloatArray(4)
+        val levels = if (!snap.playing || !settings.sideContent.showsSpectrum) FloatArray(4)
             else when (performance.spectrumMode) {
                 SpectrumMode.LIVE -> spectrum()
                 SpectrumMode.SYNTHETIC -> SyntheticSpectrum.levels(snap.positionMs)

@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.gaboron.spwisland.core
 
-enum class LeadingContent { SPECTRUM, COVER }
+enum class SideContent(val showsSpectrum: Boolean, val showsSides: Boolean) {
+    COVER_SPECTRUM(true, true),
+    SPECTRUM(true, true),
+    COVER(false, true),
+    NONE(false, false)
+}
 enum class BackgroundProgressMode { OFF, FILL, TOP_LINE }
 
 data class IslandSettings(
@@ -21,7 +26,7 @@ data class IslandSettings(
     val backgroundProgress: BackgroundProgressMode = BackgroundProgressMode.OFF,
     val spectrumCoverColor: Boolean = false,
     val fixedWidth: Boolean = false,
-    val leadingContent: LeadingContent = LeadingContent.SPECTRUM,
+    val sideContent: SideContent = SideContent.COVER_SPECTRUM,
     val fontFamily: String = "",
     val fontSize: Int = 22,
     val maxWidth: Int = 640,

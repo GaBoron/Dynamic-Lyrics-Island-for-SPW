@@ -3,7 +3,6 @@
 package io.github.gaboron.spwisland.host
 
 import com.xuncorp.spw.workshop.api.WorkshopApi
-import io.github.gaboron.spwisland.core.LeadingContent
 import io.github.gaboron.spwisland.core.PlaybackTimeline
 import io.github.gaboron.spwisland.core.SpectrumMode
 import io.github.gaboron.spwisland.core.performance
@@ -69,7 +68,7 @@ class IslandRuntime : AutoCloseable {
     private fun updateSpectrumMode() {
         val current = settings.read()
         spectrum.setEnabled(current.performance.spectrumMode == SpectrumMode.LIVE &&
-            current.leadingContent == LeadingContent.SPECTRUM)
+            current.sideContent.showsSpectrum)
     }
     fun recover() = safely {
         settings.set("click_through", false); settings.set("enabled", true); settings.resetPosition()

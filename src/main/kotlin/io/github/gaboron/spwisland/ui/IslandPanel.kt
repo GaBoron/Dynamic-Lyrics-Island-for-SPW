@@ -6,7 +6,6 @@ import io.github.gaboron.spwisland.core.*
 import java.awt.*
 import javax.swing.*
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 interface PlaybackActions { fun previous(); fun toggle(); fun next(); fun seek(positionMs: Long) {} }
 
@@ -117,8 +116,10 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val lyricAreaHeight = (contentHeight - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
             val lyricAreaTop = 0f
             val animation = if (settings.performance.animateLayout) transition else 1.0
-            val layout = IslandContentLayout.from(block.mainLineHeight, reveal.toFloat())
-            IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
+            val layout = IslandContentLayout.from(
+                block.mainLineHeight, reveal.toFloat(), settings.sideContent.showsSides
+            )
+            IslandLeadingContent.draw(g, settings.sideContent, snapshot.metadata.cover,
                 bands, layout.leadingCenterX, lyricAreaTop + lyricAreaHeight / 2f,
                 layout.leadingSize, palette.spectrum)
             val lyrics = g.create() as Graphics2D
@@ -127,7 +128,9 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
                 IslandLyricsPainter.draw(lyrics, snapshot, outgoing, settings, contentWidth,
                     lyricAreaHeight, animation, layout.textInset)
             } finally { lyrics.dispose() }
-            drawStatus(g, lyricAreaTop + lyricAreaHeight / 2f, layout.statusCenterX(contentWidth))
+            IslandTrailingContent.draw(g, settings.sideContent, snapshot, bands,
+                layout.statusCenterX(contentWidth), lyricAreaTop + lyricAreaHeight / 2f,
+                layout.leadingSize, palette.spectrum, settings.performance.animateLayout)
             IslandExpandedContentTransition.layer(g, reveal)?.let { info ->
                 try {
                     val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist)
@@ -139,24 +142,5 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
                 } finally { info.dispose() }
             }
         } finally { g.dispose() }
-    }
-    private fun drawStatus(g: Graphics2D, centerY: Float, centerX: Float) {
-        if (snapshot.line == null && snapshot.lyrics.isEmpty() && snapshot.playing) {
-            for (i in 0..2) {
-                val a = if (settings.performance.animateLayout) {
-                    (150 + 90 * sin(snapshot.positionMs / 350.0 - i)).toInt()
-                } else 150
-                g.color = Color(190, 204, 221, a)
-                g.fill(java.awt.geom.Ellipse2D.Float(centerX - 8f + i * 7f, centerY - 2f, 4f, 4f))
-            }
-        } else {
-            g.color = Color(115, 131, 149)
-            if (snapshot.playing) {
-                g.fill(java.awt.geom.Ellipse2D.Float(centerX - 3f, centerY - 3f, 6f, 6f))
-            } else {
-                g.fill(java.awt.geom.RoundRectangle2D.Float(centerX - 6f, centerY - 5f, 3f, 10f, 2f, 2f))
-                g.fill(java.awt.geom.RoundRectangle2D.Float(centerX, centerY - 5f, 3f, 10f, 2f, 2f))
-            }
-        }
     }
 }

@@ -117,17 +117,21 @@
         {
           "type": "list",
           "key": "leading_content",
-          "title": "左侧信息",
+          "title": "两侧信息",
           "entries": [
-            "实时频谱",
-            "专辑封面"
+            "左侧封面 + 右侧频谱",
+            "左侧实时频谱",
+            "左侧专辑封面",
+            "都不显示"
           ],
           "entry_values": [
+            "cover_spectrum",
             "spectrum",
-            "cover"
+            "cover",
+            "none"
           ],
-          "default_value": "spectrum",
-          "summary": "封面来自本地音频内嵌图片或同目录 cover/folder 图片。"
+          "default_value": "cover_spectrum",
+          "summary": "单项模式沿用左侧内容与右侧播放状态；封面来自本地音频内嵌图片或同目录 cover/folder 图片。"
         },
         {
           "type": "seekbar",

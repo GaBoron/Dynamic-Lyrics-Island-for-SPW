@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.gaboron.spwisland.ui
 
-import io.github.gaboron.spwisland.core.LeadingContent
+import io.github.gaboron.spwisland.core.SideContent
 import io.github.gaboron.spwisland.core.CoverArtwork
 import java.awt.*
 import java.awt.geom.AffineTransform
@@ -13,16 +13,17 @@ object IslandLeadingContent {
     private var cachedArtwork: CoverArtwork? = null
     private var cachedImage: BufferedImage? = null
 
-    fun draw(g: Graphics2D, mode: LeadingContent, cover: CoverArtwork?, bands: FloatArray,
+    fun draw(g: Graphics2D, mode: SideContent, cover: CoverArtwork?, bands: FloatArray,
              centerX: Float, centerY: Float, size: Float, accent: Color) {
         when (mode) {
-            LeadingContent.SPECTRUM -> spectrum(g, bands, centerX, centerY, size, accent)
-            LeadingContent.COVER -> cover(g, cover, centerX, centerY, size, accent)
+            SideContent.COVER_SPECTRUM, SideContent.COVER -> cover(g, cover, centerX, centerY, size, accent)
+            SideContent.SPECTRUM -> drawSpectrum(g, bands, centerX, centerY, size, accent)
+            SideContent.NONE -> Unit
         }
     }
 
-    private fun spectrum(g: Graphics2D, bands: FloatArray, centerX: Float, centerY: Float,
-                         size: Float, accent: Color) {
+    internal fun drawSpectrum(g: Graphics2D, bands: FloatArray, centerX: Float, centerY: Float,
+                              size: Float, accent: Color) {
         val scale = size / BASE_SIZE
         val barWidth = 3f * scale
         val corner = 3f * scale

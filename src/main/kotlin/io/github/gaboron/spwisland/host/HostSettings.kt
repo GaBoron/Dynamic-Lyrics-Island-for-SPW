@@ -65,9 +65,11 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         backgroundProgress = backgroundProgressMode(),
         spectrumCoverColor = config.get("spectrum_cover_color", false),
         fixedWidth = config.get("fixed_width", false),
-        leadingContent = if (!Platform.isWindows()) LeadingContent.COVER else when (config.get("leading_content", "spectrum")) {
-            "cover" -> LeadingContent.COVER
-            else -> LeadingContent.SPECTRUM
+        sideContent = if (!Platform.isWindows()) SideContent.COVER else when (config.get("leading_content", "cover_spectrum")) {
+            "spectrum" -> SideContent.SPECTRUM
+            "cover" -> SideContent.COVER
+            "none" -> SideContent.NONE
+            else -> SideContent.COVER_SPECTRUM
         },
         fontFamily = config.get("font_family", "").take(100).trim(),
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
