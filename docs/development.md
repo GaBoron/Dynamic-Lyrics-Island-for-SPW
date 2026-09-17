@@ -62,10 +62,4 @@ Linux 托盘通过同一脚本的 `tray` 模式调用 AppIndicator（不可用�
 
 ## Linux 桌面回归检查
 
-以下均为显式运行的检查，不随 `pluginLinux` 打包执行：
-
-- `./gradlew linuxProcessCheck --no-daemon`：主动阻塞宿主 EDT，检查子进程仍提交完整帧。可通过 `-PtestRuntime=/path/to/runtime` 使用 SPW 自带的 JVM。
-- `./gradlew linuxDesktopCheck --no-daemon`：检查透明画布、窗口形状和帧调度，组件绘制图保存在 `build/desktop-check/`。
-- `python3 src/test/python/linux_gtk_check.py select` / `outside`：实际显示 GTK 菜单，检查命令回传或外部点击关闭并保存菜单绘制图。`outside` 会移动和点击鼠标，运行时不要操作其他应用。
-
-这些检查不替代真实 SPW、具体合成器和多显示器环境下的用户验证。
+Linux 支持仍需在真实 SPW、具体合成器和多显示器环境中完成用户验证。
