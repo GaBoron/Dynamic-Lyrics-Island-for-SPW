@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-3.0-only
+package io.github.gaboron.spwisland.ui
+
+import io.github.gaboron.spwisland.platform.LinuxHelper
+import java.nio.file.Files
+import java.util.concurrent.Executors
+import javax.swing.SwingUtilities
+import javax.swing.Timer
+
+/** Native Linux tray with an attached GTK menu; no AWT popup-trigger dependency. */
+internal class GtkTray(private val entries: () -> List<PopupMenuEntry>,
+                       private val selected: (Int) -> Unit,
+                       private val report: (Throwable) -> Unit) : AutoCloseable {
+    private val icon = ApplicationIdentity.exportIcon()
+    private val process = try { LinuxHelper.start("tray", ApplicationIdentity.NAME, icon.toString()) }
+        catch (error: Exception) { Files.deleteIfExists(icon); throw error }
+    private val writer = process.outputStream.bufferedWriter(Charsets.UTF_8)
+    private val sender = Executors.newSingleThreadExecutor { Thread(it, "SPW tray updates").apply { isDaemon = true } }
+    private var previous: List<PopupMenuEntry>? = null
+    private var closed = false
+    private val timer = Timer(250) { update() }
+
+    init {
+        update()
+        timer.start()
+        Thread({
+            try {
+                process.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                    lines.forEach { line ->
+                        val command = line.toIntOrNull() ?: return@forEach
+                        SwingUtilities.invokeLater {
+                            if (!closed && entries().any { it.id == command &&
+                                    it.kind in setOf(PopupMenuKind.ACTION, PopupMenuKind.TOGGLE) }) selected(command)
+                        }
+                    }
+                }
+                val exit = process.waitFor()
+                SwingUtilities.invokeLater {
+                    if (!closed) { close(); report(IllegalStateException("Linux 托盘已退出（$exit）")) }
+                }
+            } catch (error: Exception) {
+                SwingUtilities.invokeLater { if (!closed) { close(); report(error) } }
+            }
+        }, "SPW tray commands").apply { isDaemon = true }.start()
+    }
+
+    private fun update() {
+        if (closed) return
+        val current = entries()
+        if (current == previous) return
+        previous = current
+        sender.execute {
+            try {
+                current.forEach { entry ->
+                    val label = entry.label.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+                    writer.write("${entry.kind}\t${entry.id}\t${if (entry.selected) 1 else 0}\t$label\n")
+                }
+                writer.write("END\n"); writer.flush()
+            } catch (error: Exception) {
+                SwingUtilities.invokeLater { if (!closed) { close(); report(error) } }
+            }
+        }
+    }
+
+    override fun close() {
+        if (closed) return
+        closed = true
+        timer.stop(); sender.shutdownNow(); process.destroy()
+        Thread({
+            if (!process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) process.destroyForcibly()
+            runCatching { writer.close() }
+            runCatching { Files.deleteIfExists(icon) }
+        }, "SPW tray cleanup").apply { isDaemon = true }.start()
+    }
+}

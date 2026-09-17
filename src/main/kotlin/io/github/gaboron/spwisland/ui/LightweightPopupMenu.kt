@@ -2,6 +2,7 @@
 package io.github.gaboron.spwisland.ui
 
 import com.sun.jna.Native
+import com.sun.jna.Platform
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HWND
 import io.github.gaboron.spwisland.platform.GlobalMenuDismisser
@@ -20,8 +21,9 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
 
     private val surface = MenuSurface()
     private val window = JWindow(owner).apply {
-        type = Window.Type.POPUP
-        background = Color(0, 0, 0, 0)
+        // POPUP windows are not reliably focusable on Linux, preventing outside-click dismissal.
+        type = if (Platform.isWindows()) Window.Type.POPUP else Window.Type.UTILITY
+        background = if (Platform.isWindows()) Color(0, 0, 0, 0) else Color(0x20, 0x20, 0x20)
         isAlwaysOnTop = true
         focusableWindowState = true
         isAutoRequestFocus = true
@@ -56,10 +58,11 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
         window.setLocation(x, y)
         window.isVisible = true
         window.toFront()
-        runCatching {
+        if (Platform.isWindows()) runCatching {
             User32.INSTANCE.SetForegroundWindow(HWND(Native.getWindowPointer(window)))
         }.onFailure(report)
         window.requestFocus()
+        EventQueue.invokeLater { if (window.isVisible) window.requestFocus() }
         if (!dismisser.arm(window)) report(IllegalStateException("无法监听菜单外部点击"))
     }
 
@@ -70,6 +73,7 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
             layoutKey = nextKey
             rebuild(entries, palette(useDark))
             window.pack()
+            applyWindowShape()
         } else {
             entries.filter { it.kind == PopupMenuKind.TOGGLE }.forEach {
                 toggleMarks[it.id]?.text = if (it.selected) "✓" else ""
@@ -98,7 +102,7 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
     private fun label(text: String, color: Color, style: Int, size: Float,
                       height: Int, left: Int, top: Int, bottom: Int) = JLabel(text).apply {
         foreground = color
-        font = Font("Microsoft YaHei UI", style, size.toInt()).deriveFont(size)
+        font = SystemUiFont.derive(style, size)
         border = EmptyBorder(top, left, bottom, 10)
         preferredSize = Dimension(236, height)
         maximumSize = preferredSize
@@ -107,7 +111,12 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
     private fun separator(colors: Palette) = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = EmptyBorder(6, 32, 6, 10)
-        add(JSeparator().apply { foreground = colors.border }, BorderLayout.CENTER)
+        add(object : JComponent() {
+            override fun paintComponent(graphics: Graphics) {
+                graphics.color = colors.border
+                graphics.fillRect(0, 0, width, 1)
+            }
+        }, BorderLayout.CENTER)
         preferredSize = Dimension(236, 13)
         maximumSize = preferredSize
     }
@@ -125,12 +134,12 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
         }
         val mark = JLabel(if (entry.kind == PopupMenuKind.TOGGLE && entry.selected) "✓" else "").apply {
             foreground = colors.accent
-            font = Font("Segoe UI Symbol", Font.PLAIN, 14)
+            font = SystemUiFont.derive(Font.PLAIN, 14f)
             preferredSize = Dimension(22, 32)
         }
         val text = JLabel(entry.label).apply {
             foreground = colors.text
-            font = Font("Microsoft YaHei UI", Font.PLAIN, 13)
+            font = SystemUiFont.derive(Font.PLAIN, 13f)
         }
         button.add(mark, BorderLayout.WEST)
         button.add(text, BorderLayout.CENTER)
@@ -173,6 +182,15 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
         Color(0x00, 0x67, 0xC0), Color(0xE9, 0xE9, 0xE9, 138), Color(0x45, 0x45, 0x45, 28)
     )
 
+    private fun applyWindowShape() {
+        if (Platform.isWindows()) return
+        window.background = surface.colors.background
+        runCatching {
+            window.shape = RoundRectangle2D.Double(
+                0.0, 0.0, window.width.toDouble(), window.height.toDouble(), 32.0, 32.0)
+        }
+    }
+
     override fun close() {
         dismisser.close()
         command = null
@@ -213,4 +231,5 @@ internal class LightweightPopupMenu(private val owner: Window, private val repor
             super.paintComponent(graphics)
         }
     }
+
 }

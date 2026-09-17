@@ -14,6 +14,8 @@ import java.awt.Window
 class WindowsOverlay {
     companion object { private const val ERROR_INVALID_WINDOW_HANDLE = 1400 }
     private val user32 = if (Platform.isWindows()) User32.INSTANCE else null
+    val supportsClickThrough: Boolean get() = user32 != null
+    val supportsStableTranslucentCanvas: Boolean get() = user32 != null
     private fun handle(window: Window) = HWND(Native.getWindowPointer(window))
     private fun existingHandle(window: Window, api: User32): HWND? {
         val pointer = Native.getWindowPointer(window) ?: return null

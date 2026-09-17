@@ -22,7 +22,7 @@ data class IslandSettings(
     val spectrumCoverColor: Boolean = false,
     val fixedWidth: Boolean = false,
     val leadingContent: LeadingContent = LeadingContent.SPECTRUM,
-    val fontFamily: String = "Microsoft YaHei UI",
+    val fontFamily: String = "Dialog",
     val fontSize: Int = 22,
     val maxWidth: Int = 640,
     val opacity: Int = 96,
@@ -33,7 +33,7 @@ data class IslandSettings(
     val positionAnchor: IslandAnchor? = null,
     val legacyCenterX: Int? = null,
     val legacyTop: Int? = null
-)
+) : java.io.Serializable
 
 interface SettingsStore {
     fun read(): IslandSettings

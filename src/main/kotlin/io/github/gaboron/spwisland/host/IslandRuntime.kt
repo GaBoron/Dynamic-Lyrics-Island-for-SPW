@@ -9,6 +9,8 @@ import io.github.gaboron.spwisland.core.SpectrumMode
 import io.github.gaboron.spwisland.core.performance
 import io.github.gaboron.spwisland.ui.*
 import io.github.gaboron.spwisland.platform.ProcessSpectrum
+import com.sun.jna.Platform
+import io.github.gaboron.spwisland.remote.LinuxIslandProcess
 import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.KeyEvent
@@ -30,11 +32,12 @@ class IslandRuntime : AutoCloseable {
         }
     }
     private var window: IslandWindow? = null
+    private var linuxWindow: LinuxIslandProcess? = null
     private val spectrum = ProcessSpectrum()
     @Volatile private var closed = false
     private val settings = HostSettings(WorkshopApi.manager.createConfigManager()) {
         updateSpectrumMode()
-        SwingUtilities.invokeLater { if (!closed) window?.reload() }
+        if (!Platform.isLinux()) SwingUtilities.invokeLater { if (!closed) window?.reload() }
     }
     private val keyboard = KeyEventDispatcher { e ->
         if (!closed && e.id == KeyEvent.KEY_RELEASED && e.keyCode == KeyEvent.VK_D &&
@@ -45,8 +48,7 @@ class IslandRuntime : AutoCloseable {
     fun start() {
         updateSpectrumMode()
         currentTrackRecovery.start()
-        onEdt {
-            window = IslandWindow(timeline, settings, object : PlaybackActions {
+        val actions = object : PlaybackActions {
                 override fun previous() = safely { WorkshopApi.playback.previous() }
                 override fun toggle() = safely {
                     if (timeline.snapshot().playing) WorkshopApi.playback.pause() else WorkshopApi.playback.play()
@@ -56,7 +58,11 @@ class IslandRuntime : AutoCloseable {
                     WorkshopApi.playback.seekTo(positionMs)
                     timeline.seek(positionMs)
                 }
-            }, ::report, spectrum::levels)
+        }
+        if (Platform.isLinux()) {
+            linuxWindow = LinuxIslandProcess(timeline, settings, actions, ::report)
+        } else onEdt {
+            window = IslandWindow(timeline, settings, actions, ::report, spectrum::levels)
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
@@ -68,7 +74,10 @@ class IslandRuntime : AutoCloseable {
     fun recover() = safely {
         settings.set("click_through", false); settings.set("enabled", true); settings.resetPosition()
     }
-    fun about() { SwingUtilities.invokeLater { if (!closed) window?.about() } }
+    fun about() {
+        if (closed) return
+        linuxWindow?.about() ?: SwingUtilities.invokeLater { if (!closed) window?.about() }
+    }
 
     fun openSource() { SwingUtilities.invokeLater { if (!closed) safely { ProjectLinks.openSource() } } }
     private fun safely(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
@@ -80,9 +89,10 @@ class IslandRuntime : AutoCloseable {
         if (closed) return
         closed = true
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyboard)
+        linuxWindow?.close(); linuxWindow = null
         try {
             currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
-        } finally { onEdt { window?.close(); window = null } }
+        } finally { if (window != null) onEdt { window?.close(); window = null } }
     }
     private fun onEdt(block: () -> Unit) {
         if (SwingUtilities.isEventDispatchThread()) block() else SwingUtilities.invokeAndWait(block)
