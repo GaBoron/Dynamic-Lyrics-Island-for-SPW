@@ -47,7 +47,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
         toolTipText = label; accessibleContext.accessibleName = label
         isFocusable = false; isContentAreaFilled = false; isBorderPainted = false
         margin = Insets(0, 0, 0, 0)
-        foreground = Color(223, 228, 237); font = Font("Dialog", Font.PLAIN, 16)
+        foreground = Color(223, 228, 237); font = SystemUiFont.derive(Font.PLAIN, 16f)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         addActionListener { clicked() }; this@IslandPanel.add(this)
     }
@@ -117,26 +117,25 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val lyricAreaHeight = (contentHeight - reveal * IslandTextBlock.EXPANDED_HEIGHT).toFloat().coerceAtLeast(1f)
             val lyricAreaTop = 0f
             val animation = if (settings.performance.animateLayout) transition else 1.0
-            val sidePadding = (IslandTextBlock.EXPANDED_SIDE_PADDING * reveal).toFloat()
-            val textInset = IslandTextBlock.INSET + sidePadding
+            val layout = IslandContentLayout.from(block.mainLineHeight, reveal.toFloat())
             IslandLeadingContent.draw(g, settings.leadingContent, snapshot.metadata.cover,
-                bands, textInset - 24f, lyricAreaTop + lyricAreaHeight / 2f,
-                palette.spectrum)
+                bands, layout.leadingCenterX, lyricAreaTop + lyricAreaHeight / 2f,
+                layout.leadingSize, palette.spectrum)
             val lyrics = g.create() as Graphics2D
             try {
                 lyrics.translate(0.0, lyricAreaTop.toDouble())
                 IslandLyricsPainter.draw(lyrics, snapshot, outgoing, settings, contentWidth,
-                    lyricAreaHeight, animation, textInset)
+                    lyricAreaHeight, animation, layout.textInset)
             } finally { lyrics.dispose() }
-            drawStatus(g, lyricAreaTop + lyricAreaHeight / 2f, contentWidth - textInset + 24f)
+            drawStatus(g, lyricAreaTop + lyricAreaHeight / 2f, layout.statusCenterX(contentWidth))
             IslandExpandedContentTransition.layer(g, reveal)?.let { info ->
                 try {
                     val label = listOfNotNull(snapshot.track?.title, snapshot.track?.artist)
                         .filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "在 SPW 中播放音乐" }
-                    LyricPainter.draw(info, label, emptyList(), 0, 42f + sidePadding,
+                    LyricPainter.draw(info, label, emptyList(), 0, layout.infoInset,
                         lyricAreaHeight + 17f,
-                        contentWidth - 84f - sidePadding * 2,
-                        block.mainFont.deriveFont(12f), false, Color(147, 156, 174))
+                        contentWidth - layout.infoInset * 2,
+                        SystemUiFont.derive(Font.PLAIN, 12f), false, Color(147, 156, 174))
                 } finally { info.dispose() }
             }
         } finally { g.dispose() }

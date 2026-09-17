@@ -7,7 +7,7 @@ import java.awt.geom.Rectangle2D
 
 object IslandLyricsPainter {
     fun draw(g: Graphics2D, current: PlaybackSnapshot, previous: PlaybackSnapshot?, settings: IslandSettings,
-             width: Float, height: Float, transition: Double, inset: Float = IslandTextBlock.INSET) {
+             width: Float, height: Float, transition: Double, inset: Float) {
         val progress = if (transition >= 1) 1.0 else AmllMotion.line(transition * .65)
         val outgoingAlpha = (1 - transition * 3).coerceIn(0.0, 1.0).toFloat()
         val currentRows = IslandLyricsLayout(current, settings).rows(height)

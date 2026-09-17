@@ -56,3 +56,9 @@ https://www.jthink.net/jaudiotagger/
 Unmodified library under LGPL-2.1-or-later (licenses/LGPL-2.1.txt).
 Used only for local metadata reading. The replaceable library JAR is in lib/;
 its corresponding upstream source JAR is included in source/.
+
+Noto Sans CJK SC, Copyright 2014-2021 Adobe (http://www.adobe.com/),
+with Reserved Font Name "Source".
+https://github.com/notofonts/noto-cjk/tree/Sans2.004
+Unmodified Regular OTF under the SIL Open Font License 1.1
+(licenses/OFL-1.1-Noto-Sans-SC.txt). Bundled for lyrics and plugin UI text.

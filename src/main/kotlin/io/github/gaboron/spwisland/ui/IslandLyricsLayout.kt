@@ -12,7 +12,9 @@ class IslandLyricsLayout(snapshot: PlaybackSnapshot, private val settings: Islan
         .ifEmpty { listOf(IslandTextBlock(snapshot, settings)) }
     private val rowGap = if (blocks.size > 1) maxOf(8f, settings.fontSize * .36f) else 0f
     private val contentHeight = blocks.sumOf { it.height.toDouble() }.toFloat() + rowGap * (blocks.size - 1)
-    val preferredHeight = maxOf(settings.fontSize + 28, ceil(contentHeight + 28).toInt())
+    private val contentLayout = IslandContentLayout.from(blocks.first().mainLineHeight, 0f)
+    val preferredHeight = maxOf(settings.fontSize + 28, ceil(contentHeight + 28).toInt(),
+        contentLayout.minimumLyricHeight)
 
     data class Row(val block: IslandTextBlock, val mainBaseline: Float, val subBaseline: Float)
 
@@ -30,11 +32,11 @@ class IslandLyricsLayout(snapshot: PlaybackSnapshot, private val settings: Islan
         val motionPad = blocks.maxOf { block ->
             if (settings.karaoke && block.timedWords.isNotEmpty()) settings.fontSize * .32f else 0f
         }
+        val horizontal = IslandContentLayout.from(blocks.first().mainLineHeight, if (expanded) 1f else 0f)
         val needed = ceil(blocks.maxOf { maxOf(it.shapedMain.width + motionPad, it.shapedSub?.width ?: 0f) } +
-            IslandTextBlock.INSET * 2).toInt()
+            horizontal.textInset * 2).toInt()
         val limit = maxWidth.coerceAtLeast(1)
-        val minimum = if (expanded) PlaybackProgress.FIXED_WIDTH + IslandTextBlock.EXPANDED_SIDE_SPACE * 2 else 240
-        val natural = maxOf(needed, minimum) + if (expanded) IslandTextBlock.EXPANDED_SIDE_PADDING * 2 else 0
+        val natural = maxOf(needed, IslandContentLayout.minimumWidth(expanded))
         return Dimension((if (settings.fixedWidth) limit else natural).coerceAtMost(limit),
             preferredHeight + if (expanded) IslandTextBlock.EXPANDED_HEIGHT else 0)
     }

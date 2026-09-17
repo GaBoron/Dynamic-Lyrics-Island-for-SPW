@@ -69,7 +69,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             "cover" -> LeadingContent.COVER
             else -> LeadingContent.SPECTRUM
         },
-        fontFamily = configuredFontFamily(),
+        fontFamily = config.get("font_family", "").take(100).trim(),
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
@@ -79,12 +79,6 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         legacyCenterX = optionalNumber("center_x"),
         legacyTop = optionalNumber("top")
     )
-    private fun configuredFontFamily(): String {
-        val platformDefault = if (Platform.isWindows()) "Microsoft YaHei UI" else "Dialog"
-        val configured = config.get("font_family", platformDefault).take(100).ifBlank { platformDefault }
-        // The old cross-platform default should not force a missing Windows font on Linux.
-        return if (!Platform.isWindows() && configured == "Microsoft YaHei UI") "Dialog" else configured
-    }
     internal fun refresh() {
         val notify = synchronized(lock) {
             if (closed || !Files.exists(config.getConfigPath())) return

@@ -101,7 +101,8 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
             override fun mouseReleased(e: MouseEvent) {
                 if (!Platform.isLinux() && e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (dragging) {
-                    val current = Rectangle(window.x + panel.x, window.y + panel.y, panel.width, panel.height)
+                    val topLeft = dragTopLeft ?: Point(window.x + panel.x, window.y + panel.y)
+                    val current = Rectangle(topLeft.x, topLeft.y, panel.width, panel.height)
                     val devices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
                     val device = devices.find { it.defaultConfiguration.bounds.contains(current.centerPoint()) }
                         ?: window.graphicsConfiguration.device
@@ -127,7 +128,15 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
                 val current = e.locationOnScreen
                 if (start.distance(current) < 4 && !dragging) return
                 dragging = true
-                dragTopLeft = Point(origin.x + current.x - start.x, origin.y + current.y - start.y)
+                val candidate = Rectangle(origin.x + current.x - start.x, origin.y + current.y - start.y,
+                    panel.width, panel.height)
+                val devices = GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
+                val device = devices.find { it.defaultConfiguration.bounds.contains(current) }
+                    ?: window.graphicsConfiguration.device
+                val snapped = IslandPlacement.snapDrag(
+                    IslandPlacement.workArea(device.defaultConfiguration), candidate)
+                dragTopLeft = snapped.topLeft
+                dragAnchor = snapped.anchor
             }
         })
         // Allocate a native peer while hidden, so full-screen checks also work before first show.

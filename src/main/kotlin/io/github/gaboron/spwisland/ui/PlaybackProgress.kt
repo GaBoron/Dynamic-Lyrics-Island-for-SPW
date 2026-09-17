@@ -61,7 +61,7 @@ class PlaybackProgress(private val seek: (Long) -> Unit) : JComponent() {
             g.color = if (isEnabled) foreground ?: Color.WHITE else Color.GRAY
             g.fillRoundRect(48, 12, filled, 4, 4, 4)
             if (isEnabled) g.fillOval(45 + filled, 9, 10, 10)
-            g.font = Font("Dialog", Font.PLAIN, 10)
+            g.font = SystemUiFont.derive(Font.PLAIN, 10f)
             g.drawString(time(if (duration > 0) position else snapshot.positionMs), 0, 18)
             val end = if (duration > 0) time(duration) else "--:--"
             g.drawString(end, width - g.fontMetrics.stringWidth(end), 18)

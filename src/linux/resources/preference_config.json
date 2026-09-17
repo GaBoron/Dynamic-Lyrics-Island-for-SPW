@@ -62,9 +62,9 @@
         {
           "type": "edittext",
           "key": "font_family",
-          "title": "字体",
-          "default_value": "Dialog",
-          "summary": "默认使用 Linux 桌面系统字体；也可输入系统已安装的字体名称。"
+          "title": "歌词字体（可选）",
+          "default_value": "",
+          "summary": "留空使用插件内置的 Noto Sans CJK SC；填写已安装字体名称时仅影响歌词，缺失字形仍使用内置字体。"
         },
         {
           "type": "seekbar",

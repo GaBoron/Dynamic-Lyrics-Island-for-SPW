@@ -22,7 +22,7 @@ data class IslandSettings(
     val spectrumCoverColor: Boolean = false,
     val fixedWidth: Boolean = false,
     val leadingContent: LeadingContent = LeadingContent.SPECTRUM,
-    val fontFamily: String = "Dialog",
+    val fontFamily: String = "",
     val fontSize: Int = 22,
     val maxWidth: Int = 640,
     val opacity: Int = 96,

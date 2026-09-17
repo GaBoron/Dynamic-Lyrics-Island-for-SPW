@@ -14,34 +14,44 @@ object IslandLeadingContent {
     private var cachedImage: BufferedImage? = null
 
     fun draw(g: Graphics2D, mode: LeadingContent, cover: CoverArtwork?, bands: FloatArray,
-             centerX: Float, centerY: Float, accent: Color) {
+             centerX: Float, centerY: Float, size: Float, accent: Color) {
         when (mode) {
-            LeadingContent.SPECTRUM -> spectrum(g, bands, centerX, centerY, accent)
-            LeadingContent.COVER -> cover(g, cover, centerX, centerY, accent)
+            LeadingContent.SPECTRUM -> spectrum(g, bands, centerX, centerY, size, accent)
+            LeadingContent.COVER -> cover(g, cover, centerX, centerY, size, accent)
         }
     }
 
-    private fun spectrum(g: Graphics2D, bands: FloatArray, centerX: Float, centerY: Float, accent: Color) {
+    private fun spectrum(g: Graphics2D, bands: FloatArray, centerX: Float, centerY: Float,
+                         size: Float, accent: Color) {
+        val scale = size / BASE_SIZE
+        val barWidth = 3f * scale
+        val corner = 3f * scale
         g.color = accent
         for (i in 0 until 4) {
-            val barHeight = 2f + bands.getOrElse(i) { 0f }.coerceIn(0f, 1f) * 24f
+            val barHeight = 2f * scale + bands.getOrElse(i) { 0f }.coerceIn(0f, 1f) * (size - 2f * scale)
             g.fill(RoundRectangle2D.Float(
-                centerX - 11f + i * 6f, centerY - barHeight / 2f, 3f, barHeight, 3f, 3f
+                centerX - 11f * scale + i * 6f * scale, centerY - barHeight / 2f,
+                barWidth, barHeight, corner, corner
             ))
         }
     }
 
-    private fun cover(g: Graphics2D, artwork: CoverArtwork?, centerX: Float, centerY: Float, accent: Color) {
-        val size = 32f
+    private fun cover(g: Graphics2D, artwork: CoverArtwork?, centerX: Float, centerY: Float,
+                      size: Float, accent: Color) {
+        val scale = size / BASE_SIZE
         val x = centerX - size / 2f
         val y = centerY - size / 2f
-        val shape = RoundRectangle2D.Float(x, y, size, size, 9f, 9f)
+        val shape = RoundRectangle2D.Float(x, y, size, size, 9f * scale, 9f * scale)
         if (artwork == null) {
             g.color = Color(accent.red, accent.green, accent.blue, 55)
             g.fill(shape)
             g.color = Color(accent.red, accent.green, accent.blue, 180)
-            g.draw(java.awt.geom.Ellipse2D.Float(centerX - 7f, centerY - 7f, 14f, 14f))
-            g.fill(java.awt.geom.Ellipse2D.Float(centerX - 2f, centerY - 2f, 4f, 4f))
+            g.draw(java.awt.geom.Ellipse2D.Float(
+                centerX - 7f * scale, centerY - 7f * scale, 14f * scale, 14f * scale
+            ))
+            g.fill(java.awt.geom.Ellipse2D.Float(
+                centerX - 2f * scale, centerY - 2f * scale, 4f * scale, 4f * scale
+            ))
             return
         }
         val image = image(artwork)
@@ -71,4 +81,6 @@ object IslandLeadingContent {
         }
         return cachedImage!!
     }
+
+    private const val BASE_SIZE = 32f
 }
