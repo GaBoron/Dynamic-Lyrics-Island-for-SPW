@@ -1,133 +1,37 @@
 # Dynamic Lyrics Island for SPW
 
-> 把 SPW 的歌词变成桌面顶部的灵动词岛。QQ 群：1054809039
+> 把 SPW 的歌词变成桌面顶部的灵动词岛。  
+> QQ 群：1054809039
 
 [![Release](https://img.shields.io/github/v/release/GaBoron/Dynamic-Lyrics-Island-for-SPW?label=Release)](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest)
-[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4?logo=windows)](#系统要求)
+[![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4?logo=windows)](docs/compatibility.md)
 [![License](https://img.shields.io/badge/License-GPL--3.0%20%2B%20AGPL--3.0-blue)](#许可与致谢)
 
-胶囊／刘海外观、逐字高亮、翻译、实时频谱、专辑封面，以及悬停播放控制。常用开关可直接在词岛或托盘右键菜单调整，完整设置保留在 SPW 插件配置页。
+为 Salt Player for Windows（SPW）制作的桌面歌词插件。
 
-| 歌词 | 外观 | 交互 |
-| --- | --- | --- |
-| 逐字动画与翻译 | 胶囊／自适应刘海 | 播放、暂停与进度跳转 |
-| 日韩字体回退 | 频谱／专辑封面、圆角调节 | 拖动、吸附与鼠标穿透 |
-| 长歌词平滑滚动 | 封面主色取色 | 全屏自动隐藏 |
+支持逐字歌词、翻译、AMLL 动效、实时频谱、专辑封面与取色，以及悬停播放控制、拖动定位、鼠标穿透和全屏自动隐藏。
 
 ## 🚀 安装
 
-1. 从 [Releases](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest) 下载 `dynamic-lyrics-island-for-spw-*.zip`。
-2. 在 SPW 的创意工坊／插件管理中导入 ZIP，并启用 **Dynamic Lyrics Island for SPW**。
-3. 播放一首带歌词的歌曲。
+1. 从 [Releases](https://github.com/GaBoron/Dynamic-Lyrics-Island-for-SPW/releases/latest) 下载最新插件 ZIP。
+2. 在 SPW 的创意工坊／插件管理中导入并启用插件。
 
-如果当前 SPW 没有导入入口：退出 SPW，将 ZIP 放入 `%APPDATA%\Salt Player for Windows\workshop\plugins\`，再重新启动 SPW。
+安装失败、手动安装及系统要求请参阅 [安装与更新](docs/installation.md)。若需要自动获取逐字歌词，可搭配 [SPW-Lyrics](https://github.com/GaBoron/SPW-Lyrics)。
 
-```mermaid
-flowchart LR
-    A[下载插件 ZIP] --> B[导入并启用]
-    B --> C[播放带歌词歌曲]
-    C --> D[在插件设置中定制词岛]
-```
+## 📖 文档
 
-### 系统要求
+完整说明见 [项目文档](docs/README.md)。
 
-- Windows 10 / 11
-- 兼容 **SPW Workshop API 0.1.0-dev20** 的 SPW 版本
-- 实时频谱需要 Windows build 20348 或更高版本，以及共享模式音频输出
-
-旧版 Windows 仍可显示歌词。Java 由 SPW 提供，频谱辅助程序使用系统自带的 .NET Framework 4.x。
-
-> 若有自动获取逐字歌词需求可前往 [GaBoron/SPW-Lyrics](https://github.com/GaBoron/SPW-Lyrics)
-
-### 适配平台
-
-| 平台 | 适配情况 |
-| --- | --- |
-| Windows | 完整支持所有功能 |
-| Linux | 在适配计划中 |
-| macOS | 暂无计划 |
-| Android / iOS / HarmonyOS| Salt Player 暂不支持插件功能 |
-
-## 🖱️ 常用操作
-
-| 操作 | 效果 |
-| --- | --- |
-| 悬停词岛 | 展开歌曲信息、播放按钮和进度条 |
-| 双击文字区域 | 播放／暂停 |
-| 点击或拖动进度条 | 跳转播放位置 |
-| 拖动词岛 | 调整并保存位置；按所在屏幕区域自动选择九宫格缩放锚点 |
-| 右击词岛 | 在一级分区菜单中调整常用与显示设置，或重置位置 |
-| 在 SPW 内按 `Ctrl+Shift+D` | 显示／隐藏词岛（非全局快捷键） |
-| 托盘右键 | 快速切换性能、外观、歌词与鼠标交互设置，或显示、解锁、重置位置 |
-| 插件设置 → 找回词岛 | 恢复显示、关闭穿透并移回主屏幕顶部 |
-
-> [!TIP]
-> 开启鼠标穿透后，鼠标事件会传给下方窗口。需要调整词岛时，可从托盘菜单或 SPW 插件设置中解除穿透。
-
-## ✨ 功能说明
-
-- **歌词动画**：逐字歌词按 SPW 时间戳平滑高亮；普通逐行歌词保持整行显示，长歌词自动平移。
-- **AMLL 动效**：支持逐字抬升、长音强调、辉光和弹性过渡；低配置设备可开启“低性能模式”。
-- **低性能模式**：使用约 15 FPS、仍遵循每个歌词单元时间的简化高亮和轻量模拟频谱，关闭过渡、辉光、音频捕获和可选歌词探测，并降低窗口状态检查频率。
-- **翻译与字体**：当前行有翻译时显示第二行；所选字体缺字时自动回退到系统日韩字体。字体缺失、字形覆盖或字体自身渲染导致的问题不属于本插件修复范围。
-- **频谱与封面**：左侧可显示 SPW 进程的四频段实时能量，或本地音频内嵌／同目录 `cover`、`folder` 图片。
-- **封面取色**：优先选择封面占比最大的彩色系并避开黑白，可分别应用到歌词高亮、背景和频谱。
-- **桌面适配**：根据词岛所在屏幕区域自动选择九宫格缩放锚点；拖动时锁定当前锚点，松手后再切换，避免跨区闪烁。刘海在顶部／底部区域自动翻转，在中部区域恢复胶囊轮廓；底部区域的播放控件向上展开，并支持多屏找回、全屏隐藏和暂停隐藏。菜单在下次打开时跟随 Windows 深浅色主题。
-
-插件只接收 SPW 已加载的歌词，不搜索、不上传，也不修改歌曲或歌词文件。SPW 当前仅提供正在播放的歌词行，因此无法预告下一句或显示完整歌词列表。
-
-## 🛠️ 常见问题
-
-<details>
-<summary><strong>没有歌词或歌名</strong></summary>
-
-先确认 SPW 自己能够显示歌词，再切换一次歌曲。歌名来自歌词加载回调；若其他插件提前返回歌词，SPW 是否继续通知本插件取决于宿主调用顺序。
-</details>
-
-<details>
-<summary><strong>看不到封面</strong></summary>
-
-插件只读本地音频内嵌封面，并回退到同目录的 `cover.jpg`、`cover.png`、`folder.jpg` 或 `folder.png`。网络歌曲或不可读文件会显示唱片占位图。
-</details>
-
-<details>
-<summary><strong>高亮偏早或偏晚</strong></summary>
-
-在插件设置中调整“逐字高亮偏移”：正值使高亮提前，负值使高亮延后。歌词换行时机仍由 SPW 决定。
-</details>
-
-<details>
-<summary><strong>频谱不动</strong></summary>
-
-确认歌曲正在播放且未静音。进程回环不支持低于 Windows build 20348 的系统，独占／ASIO 输出也可能无法捕获；请尝试共享模式输出。
-</details>
-
-<details>
-<summary><strong>词岛消失</strong></summary>
-
-检查“显示词岛”“暂停时隐藏”和“全屏时隐藏”。动态壁纸可能被识别为全屏窗口；多屏位置异常时使用“找回词岛”。
-</details>
-
-<details>
-<summary><strong>为什么右键菜单没有宽度、透明度或取色设置</strong></summary>
-
-右键菜单只保留经常切换的项目，避免日常操作过于复杂。最大宽度、背景透明度、圆角、取色和字体等完整设置请在 SPW 的插件配置页调整；旧滑杆值若带小数，插件读取后会规范化为整数。
-</details>
-
-<details>
-<summary><strong>字体缺失、乱码或显示异常</strong></summary>
-
-“字体”需要填写 Windows 已安装的字体名称。插件会为缺失字形尝试系统字体回退，但字体未安装、字形覆盖不完整或字体自身渲染造成的问题不属于插件修复范围。
-</details>
-
-## 📚 开发与构建
-
-构建方式、模块边界和宿主运行限制见 [开发说明](docs/development.md)。
+- [安装与更新](docs/installation.md)
+- [使用与设置](docs/usage.md)
+- [常见问题](docs/troubleshooting.md)
+- [兼容性与限制](docs/compatibility.md)
+- [开发与构建](docs/development.md)
 
 ## 📄 许可与致谢
 
-**灵动词岛原创：Lyricify / WXRIW（XY Wang）。** 本项目依据 [CC BY-SA 4.0](https://github.com/WXRIW/Lyricify-App#lyricify-原创)独立实现，不是 Lyricify 官方产品，也不包含 Lyricify 程序或词库。
+灵动词岛原创：Lyricify / WXRIW（XY Wang）。本项目依据 [CC BY-SA 4.0](https://github.com/WXRIW/Lyricify-App#lyricify-原创) 独立实现，并非 Lyricify 官方产品。
 
-AMLL 动画移植模块采用 **AGPL-3.0-only**，其他程序采用 **GPL-3.0-only**；视觉、交互改编及文档采用 **CC BY-SA 4.0**。SPW API 与改编构建示例保留 Apache-2.0 声明，JNA 采用其 Apache-2.0 许可。
+AMLL 动画移植模块采用 AGPL-3.0-only，其他程序采用 GPL-3.0-only；视觉、交互改编及文档采用 CC BY-SA 4.0。
 
-详见 [NOTICE](NOTICE)、[第三方许可说明](THIRD_PARTY_NOTICES.md)和 [LICENSE](LICENSE)。插件包包含许可文件与对应完整源码，转发时请一并保留。
+详见 [NOTICE](NOTICE)、[第三方许可说明](THIRD_PARTY_NOTICES.md) 和 [LICENSE](LICENSE)。
