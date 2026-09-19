@@ -72,6 +72,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             else -> SideContent.COVER_SPECTRUM
         },
         fontFamily = config.get("font_family", "").take(100).trim(),
+        fontWeight = LyricFontWeight.fromStorage(config.get("font_weight", "400")),
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),

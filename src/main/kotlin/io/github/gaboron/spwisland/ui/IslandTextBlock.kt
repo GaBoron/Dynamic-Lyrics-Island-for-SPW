@@ -3,7 +3,6 @@ package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.*
 import java.awt.Dimension
-import java.awt.Font
 import kotlin.math.ceil
 
 /** One layout specification owns text selection, insets, measured width and vertical centering. */
@@ -11,12 +10,14 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
                       selectedLine: LyricLine? = snapshot.line) {
     val line = selectedLine
     val main = line?.text?.takeIf { it.isNotBlank() } ?: snapshot.track?.title?.takeIf { it.isNotBlank() } ?: "SPW"
-    val mainFont = SystemUiFont.lyric(settings.fontFamily, Font.PLAIN, settings.fontSize.toFloat())
+    val mainFont = SystemUiFont.lyric(settings.fontFamily, settings.fontWeight, settings.fontSize.toFloat())
+    val mainFallbackFont = SystemUiFont.lyricFallback(settings.fontWeight, settings.fontSize.toFloat())
     val sub = line?.translation?.takeIf { settings.translation && it.isNotBlank() }
     val subFont = mainFont.deriveFont(settings.fontSize * .7f)
+    val subFallbackFont = mainFallbackFont.deriveFont(settings.fontSize * .7f)
     val mainLineHeight = mainFont.getLineMetrics("Ag", LyricTypography.context).height
-    val shapedMain = LyricTypography.shape(main, mainFont)
-    val shapedSub = sub?.let { LyricTypography.shape(it, subFont) }
+    val shapedMain = LyricTypography.shape(main, mainFont, mainFallbackFont)
+    val shapedSub = sub?.let { LyricTypography.shape(it, subFont, subFallbackFont) }
     val timedWords = line?.timedWords.takeIf { snapshot.usesWordTiming }.orEmpty()
     val gap = if (sub == null) 0f else 8f
     val height = shapedMain.height + gap + (shapedSub?.height ?: 0f)

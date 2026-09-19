@@ -28,6 +28,7 @@ data class IslandSettings(
     val fixedWidth: Boolean = false,
     val sideContent: SideContent = SideContent.COVER_SPECTRUM,
     val fontFamily: String = "",
+    val fontWeight: LyricFontWeight = LyricFontWeight.REGULAR,
     val fontSize: Int = 22,
     val maxWidth: Int = 640,
     val opacity: Int = 96,

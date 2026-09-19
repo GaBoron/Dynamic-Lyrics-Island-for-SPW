@@ -49,9 +49,11 @@ object IslandLyricsPainter {
                 if (block.timedWords.isNotEmpty()) time else (time - (line?.startMs ?: 0)).coerceAtLeast(0),
                 inset, row.mainBaseline, available, block.mainFont, settings.karaoke,
                 color = IslandPalette.from(settings, snapshot.metadata.coverRgb).lyric,
-                detailedKaraoke = settings.performance.detailedKaraoke)
+                detailedKaraoke = settings.performance.detailedKaraoke,
+                fallbackFont = block.mainFallbackFont)
             block.sub?.let { LyricPainter.draw(copy, it, emptyList(), (time - (line?.startMs ?: 0)).coerceAtLeast(0),
-                inset, row.subBaseline, available, block.subFont, false, Color(177, 182, 195)) }
+                inset, row.subBaseline, available, block.subFont, false, Color(177, 182, 195),
+                fallbackFont = block.subFallbackFont) }
         } finally { copy.dispose() }
     }
     private fun lerp(from: Float, to: Float, progress: Double): Float =

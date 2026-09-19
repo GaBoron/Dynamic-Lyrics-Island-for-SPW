@@ -32,7 +32,7 @@ class IslandRuntime : AutoCloseable {
     }
     private var window: IslandWindow? = null
     private var linuxWindow: LinuxIslandProcess? = null
-    private val spectrum = ProcessSpectrum()
+    private val spectrum = ProcessSpectrum(::notifySpectrumFallback)
     @Volatile private var closed = false
     private val settings = HostSettings(WorkshopApi.manager.createConfigManager()) {
         updateSpectrumMode()
@@ -61,7 +61,8 @@ class IslandRuntime : AutoCloseable {
         if (Platform.isLinux()) {
             linuxWindow = LinuxIslandProcess(timeline, settings, actions, ::report)
         } else onEdt {
-            window = IslandWindow(timeline, settings, actions, ::report, spectrum::levels)
+            window = IslandWindow(timeline, settings, actions, ::report,
+                spectrum::levels, spectrum::usesSyntheticFallback)
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
@@ -83,6 +84,9 @@ class IslandRuntime : AutoCloseable {
     private fun report(error: Throwable) {
         System.err.println("[SPW Island] ${error.message}"); error.printStackTrace()
         runCatching { WorkshopApi.ui.toast(error.message ?: "词岛操作失败", WorkshopApi.Ui.ToastType.Error) }
+    }
+    private fun notifySpectrumFallback(message: String) {
+        runCatching { WorkshopApi.ui.toast(message, WorkshopApi.Ui.ToastType.Warning) }
     }
     override fun close() {
         if (closed) return

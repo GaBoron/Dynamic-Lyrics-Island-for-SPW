@@ -6,12 +6,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** Runs the private process-loopback reader only while live spectrum is enabled. */
-class ProcessSpectrum : AutoCloseable {
+class ProcessSpectrum(private val notifyFallback: (String) -> Unit = {}) : AutoCloseable {
     @Volatile private var closed = false
     @Volatile private var enabled = false
     @Volatile private var process: Process? = null
     @Volatile private var sample = FloatArray(4)
     @Volatile private var receivedAt = 0L
+    @Volatile private var syntheticFallback = false
+    @Volatile private var fallbackNotified = false
     @Volatile var status = "正在连接 SPW 音频"
         private set
     private val worker = Executors.newSingleThreadExecutor { task ->
@@ -23,6 +25,7 @@ class ProcessSpectrum : AutoCloseable {
         enabled = value
         if (value) {
             status = "正在连接 SPW 音频"
+            syntheticFallback = false
             worker.execute(::capture)
         } else {
             status = "低性能模式已停用实时频谱"
@@ -38,7 +41,15 @@ class ProcessSpectrum : AutoCloseable {
             val resource = ProcessSpectrum::class.java.getResource("/native/spw-spectrum.exe")
                 ?: error("插件中缺少 native/spw-spectrum.exe")
             check(resource.protocol == "file") { "请使用 SPW 插件 ZIP 安装频谱程序" }
-            val helper = ProcessBuilder(Path.of(resource.toURI()).toString(), ProcessHandle.current().pid().toString())
+            val executable = Path.of(resource.toURI())
+            if (!DotNetFrameworkRuntime.canRun(executable)) {
+                fallback(
+                    "实时频谱不可用：.NET Framework 4 无法启动，已改用模拟频谱",
+                    "实时频谱需要 Microsoft .NET Framework 4.8。请安装或修复后重启 SPW；当前已改用模拟频谱。"
+                )
+                return
+            }
+            val helper = ProcessBuilder(executable.toString(), ProcessHandle.current().pid().toString())
                 .redirectErrorStream(true).start()
             launched = helper
             synchronized(this) {
@@ -62,12 +73,17 @@ class ProcessSpectrum : AutoCloseable {
                 }
             } }
             if (enabled && !closed && helper.waitFor() != 0) {
-                status = "频谱不可用（需要 Windows 20348+ 与共享音频输出）：$status"
+                fallback(
+                    "频谱不可用（需要 Windows 20348+ 与共享音频输出）：$status",
+                    "实时频谱启动失败，当前已改用模拟频谱。请确认系统版本和共享音频输出可用。"
+                )
             }
         } catch (error: Exception) {
             if (enabled && !closed) {
-                status = "频谱不可用：${error.message}"
-                System.err.println("[SPW Island] $status")
+                fallback(
+                    "频谱不可用：${error.message}",
+                    "实时频谱启动失败，当前已改用模拟频谱。"
+                )
             }
         } finally {
             synchronized(this) { if (process === launched) process = null }
@@ -75,6 +91,17 @@ class ProcessSpectrum : AutoCloseable {
         }
     }
 
+    private fun fallback(detail: String, notice: String) {
+        syntheticFallback = true
+        status = detail
+        System.err.println("[SPW Island] $status")
+        if (!fallbackNotified) {
+            fallbackNotified = true
+            notifyFallback(notice)
+        }
+    }
+
+    fun usesSyntheticFallback(): Boolean = enabled && syntheticFallback
     fun levels(): FloatArray = if (System.nanoTime() - receivedAt < 350_000_000) sample else FloatArray(4)
     override fun close() {
         val helper = synchronized(this) {

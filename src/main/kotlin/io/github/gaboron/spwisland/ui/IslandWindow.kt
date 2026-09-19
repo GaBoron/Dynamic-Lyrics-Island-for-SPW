@@ -24,7 +24,8 @@ private fun overlayGraphicsConfiguration(): GraphicsConfiguration {
 /** Owns only window lifecycle, placement and presentation animation. Must live on the EDT. */
 class IslandWindow(private val timeline: PlaybackSource, private val store: SettingsStore,
                    actions: PlaybackActions, private val report: (Throwable) -> Unit,
-                   private val spectrum: () -> FloatArray = { FloatArray(4) }) : AutoCloseable {
+                   private val spectrum: () -> FloatArray = { FloatArray(4) },
+                   private val spectrumFallback: () -> Boolean = { false }) : AutoCloseable {
     companion object {
         private const val DRAG_FRAME_DELAY_MS = 8
         private const val HOVER_MARGIN = 18
@@ -163,7 +164,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
         panel.settings = settings; panel.snapshot = snap
         val levels = if (!snap.playing || !settings.sideContent.showsSpectrum) FloatArray(4)
             else when (performance.spectrumMode) {
-                SpectrumMode.LIVE -> spectrum()
+                SpectrumMode.LIVE -> if (spectrumFallback()) SyntheticSpectrum.levels(snap.positionMs) else spectrum()
                 SpectrumMode.SYNTHETIC -> SyntheticSpectrum.levels(snap.positionMs)
             }
         panel.updateSpectrum(levels, dt)

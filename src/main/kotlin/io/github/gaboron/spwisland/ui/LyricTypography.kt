@@ -15,14 +15,15 @@ import java.util.Locale
 /** Shared shaping from the bundled font for identical measurement and drawing. */
 object LyricTypography {
     val context = FontRenderContext(AffineTransform(), true, true)
-    private data class Key(val text: String, val font: Font)
+    private data class Key(val text: String, val font: Font, val fallbackFont: Font)
     private val layouts = object : LinkedHashMap<Key, ShapedText>(64, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, ShapedText>) = size > 96
     }
 
-    @Synchronized fun shape(text: String, font: Font): ShapedText = layouts.getOrPut(Key(text, font)) {
+    @Synchronized fun shape(text: String, font: Font,
+                            fallbackFont: Font = SystemUiFont.derive(font.style, font.size2D)): ShapedText =
+        layouts.getOrPut(Key(text, font, fallbackFont)) {
         require(text.isNotEmpty())
-        val bundled = SystemUiFont.derive(font.style, font.size2D)
         val attributed = AttributedString(text)
         val breaks = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
         var start = breaks.first()
@@ -30,7 +31,7 @@ object LyricTypography {
         while (end != BreakIterator.DONE) {
             val cluster = text.substring(start, end)
             attributed.addAttribute(TextAttribute.FONT,
-                if (font.canDisplayUpTo(cluster) < 0) font else bundled, start, end)
+                if (font.canDisplayUpTo(cluster) < 0) font else fallbackFont, start, end)
             start = end
             end = breaks.next()
         }
