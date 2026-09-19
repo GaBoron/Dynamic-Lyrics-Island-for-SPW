@@ -22,20 +22,25 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
     val gap = if (sub == null) 0f else 8f
     val height = shapedMain.height + gap + (shapedSub?.height ?: 0f)
     val preferredHeight = maxOf(settings.fontSize + 28, ceil(height + 28).toInt(),
-        IslandContentLayout.from(mainLineHeight, 0f, settings.sideContent.showsSides).minimumLyricHeight)
+        IslandContentLayout.from(mainLineHeight, settings.sideContent.showsSides).minimumLyricHeight)
 
-    fun size(maxWidth: Int, expanded: Boolean): Dimension {
+    fun size(maxWidth: Int, expanded: Boolean,
+             anchor: IslandAnchor = IslandAnchor.TOP_CENTER): Dimension {
         val motionPad = if (settings.karaoke && timedWords.isNotEmpty()) settings.fontSize * .32f else 0f
         val content = IslandContentLayout.from(
-            mainLineHeight, if (expanded) 1f else 0f, settings.sideContent.showsSides
+            mainLineHeight, settings.sideContent.showsSides
         )
         val needed = ceil(maxOf(shapedMain.width + motionPad, shapedSub?.width ?: 0f) +
             content.textInset * 2).toInt()
-        val limit = maxWidth.coerceAtLeast(1)
+        val height = preferredHeight + if (expanded) EXPANDED_HEIGHT else 0
+        val frameInset = ceil(IslandGeometry.frameInset(
+            height.toDouble(), settings.notch, settings.cornerRoundness, anchor
+        )).toInt()
+        val limit = (maxWidth - frameInset * 2).coerceAtLeast(1)
         val natural = maxOf(needed, IslandContentLayout.minimumWidth(expanded))
-        val width = if (settings.fixedWidth) limit else natural
-        return Dimension(width.coerceAtMost(limit),
-            preferredHeight + if (expanded) EXPANDED_HEIGHT else 0)
+        val safeWidth = if (settings.fixedWidth) limit else natural
+        return Dimension((safeWidth.coerceAtMost(limit) + frameInset * 2)
+            .coerceAtMost(maxWidth.coerceAtLeast(1)), height)
     }
     fun mainBaseline(lyricAreaHeight: Float): Float = (lyricAreaHeight - height) / 2 - shapedMain.top
     fun subBaseline(lyricAreaHeight: Float): Float = (lyricAreaHeight - height) / 2 + shapedMain.height + gap - (shapedSub?.top ?: 0f)

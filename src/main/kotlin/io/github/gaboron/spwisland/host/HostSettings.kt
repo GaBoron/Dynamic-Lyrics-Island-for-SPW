@@ -46,7 +46,8 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         // Native sliders use floating-point values. Persist whole-number settings as integers
         // so reopening SPW does not inherit noisy fractional values from the slider thumb.
         if (!Files.exists(config.getConfigPath()) || !config.reload()) return
-        val migrated = normalizeIntegerSettings() or normalizeBackgroundProgressSetting()
+        val migrated = migrateCornerRoundnessForV0100() or normalizeIntegerSettings() or
+            normalizeBackgroundProgressSetting()
         if (migrated) check(config.save()) { "词岛旧设置迁移失败，请检查 SPW 配置目录权限。" }
     }
     private fun decode(): IslandSettings = IslandSettings(
@@ -59,7 +60,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         autoHideOnHover = Platform.isWindows() && config.get("auto_hide_on_hover", false),
         // Keep the original key so existing users retain their enabled setting after the rename.
         lowPerformance = config.get("reduced_motion", false), notch = config.get("shape", "pill") == "notch",
-        cornerRoundness = number("corner_roundness", 60, 0, 100),
+        cornerRoundness = number("corner_roundness", 95, 0, 100),
         lyricCoverColor = config.get("lyric_cover_color", false),
         backgroundCoverColor = config.get("background_cover_color", false),
         backgroundProgress = backgroundProgressMode(),
@@ -125,6 +126,13 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         return true
     }
 
+    private fun migrateCornerRoundnessForV0100(): Boolean {
+        if (config.get(CORNER_ROUNDNESS_V0100_MIGRATED, false)) return false
+        config.set("corner_roundness", 95)
+        config.set(CORNER_ROUNDNESS_V0100_MIGRATED, true)
+        return true
+    }
+
     private fun normalizeIntegerSettings(): Boolean {
         var changed = false
         for ((key, limits) in INTEGER_SETTINGS) {
@@ -173,11 +181,12 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
 
     private companion object {
         val INTEGER_SETTINGS = mapOf(
-            "corner_roundness" to IntegerLimits(60, 0, 100),
+            "corner_roundness" to IntegerLimits(95, 0, 100),
             "font_size" to IntegerLimits(22, 14, 42),
             "max_width" to IntegerLimits(640, 280, 1200),
             "opacity" to IntegerLimits(96, 35, 100),
             "offset_ms" to IntegerLimits(0, -2000, 2000)
         )
+        const val CORNER_ROUNDNESS_V0100_MIGRATED = "corner_roundness_migrated_v0_10_0"
     }
 }

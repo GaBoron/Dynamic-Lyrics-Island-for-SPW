@@ -20,7 +20,7 @@ data class IslandSettings(
     val autoHideOnHover: Boolean = false,
     val lowPerformance: Boolean = false,
     val notch: Boolean = false,
-    val cornerRoundness: Int = 60,
+    val cornerRoundness: Int = 95,
     val lyricCoverColor: Boolean = false,
     val backgroundCoverColor: Boolean = false,
     val backgroundProgress: BackgroundProgressMode = BackgroundProgressMode.OFF,

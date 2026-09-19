@@ -13,7 +13,7 @@ class IslandLyricsLayout(snapshot: PlaybackSnapshot, private val settings: Islan
     private val rowGap = if (blocks.size > 1) maxOf(8f, settings.fontSize * .36f) else 0f
     private val contentHeight = blocks.sumOf { it.height.toDouble() }.toFloat() + rowGap * (blocks.size - 1)
     private val contentLayout = IslandContentLayout.from(
-        blocks.first().mainLineHeight, 0f, settings.sideContent.showsSides
+        blocks.first().mainLineHeight, settings.sideContent.showsSides
     )
     val preferredHeight = maxOf(settings.fontSize + 28, ceil(contentHeight + 28).toInt(),
         contentLayout.minimumLyricHeight)
@@ -30,18 +30,22 @@ class IslandLyricsLayout(snapshot: PlaybackSnapshot, private val settings: Islan
         }
     }
 
-    fun size(maxWidth: Int, expanded: Boolean): Dimension {
+    fun size(maxWidth: Int, expanded: Boolean, anchor: IslandAnchor): Dimension {
         val motionPad = blocks.maxOf { block ->
             if (settings.karaoke && block.timedWords.isNotEmpty()) settings.fontSize * .32f else 0f
         }
         val horizontal = IslandContentLayout.from(
-            blocks.first().mainLineHeight, if (expanded) 1f else 0f, settings.sideContent.showsSides
+            blocks.first().mainLineHeight, settings.sideContent.showsSides
         )
         val needed = ceil(blocks.maxOf { maxOf(it.shapedMain.width + motionPad, it.shapedSub?.width ?: 0f) } +
             horizontal.textInset * 2).toInt()
-        val limit = maxWidth.coerceAtLeast(1)
+        val height = preferredHeight + if (expanded) IslandTextBlock.EXPANDED_HEIGHT else 0
+        val frameInset = ceil(IslandGeometry.frameInset(
+            height.toDouble(), settings.notch, settings.cornerRoundness, anchor
+        )).toInt()
+        val limit = (maxWidth - frameInset * 2).coerceAtLeast(1)
         val natural = maxOf(needed, IslandContentLayout.minimumWidth(expanded))
-        return Dimension((if (settings.fixedWidth) limit else natural).coerceAtMost(limit),
-            preferredHeight + if (expanded) IslandTextBlock.EXPANDED_HEIGHT else 0)
+        val safeWidth = (if (settings.fixedWidth) limit else natural).coerceAtMost(limit)
+        return Dimension((safeWidth + frameInset * 2).coerceAtMost(maxWidth.coerceAtLeast(1)), height)
     }
 }

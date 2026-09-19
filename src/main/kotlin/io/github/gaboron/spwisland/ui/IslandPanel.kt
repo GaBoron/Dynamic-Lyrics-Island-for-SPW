@@ -51,10 +51,12 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
         addActionListener { clicked() }; this@IslandPanel.add(this)
     }
     fun desiredSize(availableWidth: Int): Dimension {
-        return IslandLyricsLayout(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), expanded)
+        return IslandLyricsLayout(snapshot, settings).size(
+            minOf(settings.maxWidth, availableWidth), expanded, anchor)
     }
     fun collapsedHeight(availableWidth: Int): Int =
-        IslandLyricsLayout(snapshot, settings).size(minOf(settings.maxWidth, availableWidth), false).height
+        IslandLyricsLayout(snapshot, settings).size(
+            minOf(settings.maxWidth, availableWidth), false, anchor).height
     override fun doLayout() {
         progress.update(snapshot)
         val reveal = expansion ?: if (expanded) 1.0 else 0.0
@@ -96,13 +98,17 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             g.fill(shape)
             IslandBackgroundProgress.draw(g, shape, width, height, anchor, snapshot, settings, palette, reveal)
             g.color = Color(255, 255, 255, 19); g.draw(shape)
-            val contentWidth = animatedWidth.toFloat()
+            val outerWidth = animatedWidth.toFloat()
             val contentHeight = animatedHeight.toFloat()
-            val contentX = when (anchor.horizontal) {
+            val outerX = when (anchor.horizontal) {
                 HorizontalAnchor.LEFT -> 0f
-                HorizontalAnchor.CENTER -> (width / 2).toFloat() - contentWidth / 2f
-                HorizontalAnchor.RIGHT -> width - contentWidth
+                HorizontalAnchor.CENTER -> (width / 2).toFloat() - outerWidth / 2f
+                HorizontalAnchor.RIGHT -> width - outerWidth
             }
+            val frameInset = IslandGeometry.frameInset(contentHeight.toDouble(), settings.notch,
+                settings.cornerRoundness, anchor).toFloat()
+            val contentWidth = (outerWidth - frameInset * 2f).coerceAtLeast(1f)
+            val contentX = outerX + frameInset
             val contentY = when (anchor.vertical) {
                 VerticalAnchor.TOP -> 0f
                 VerticalAnchor.CENTER -> (height / 2).toFloat() - contentHeight / 2f
@@ -117,7 +123,7 @@ class IslandPanel(private val actions: PlaybackActions) : JPanel(null) {
             val lyricAreaTop = 0f
             val animation = if (settings.performance.animateLayout) transition else 1.0
             val layout = IslandContentLayout.from(
-                block.mainLineHeight, reveal.toFloat(), settings.sideContent.showsSides
+                block.mainLineHeight, settings.sideContent.showsSides
             )
             IslandLeadingContent.draw(g, settings.sideContent, snapshot.metadata.cover,
                 bands, layout.leadingCenterX, lyricAreaTop + lyricAreaHeight / 2f,

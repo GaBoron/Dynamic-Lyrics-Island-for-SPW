@@ -6,7 +6,6 @@ import io.github.gaboron.spwisland.core.IslandAnchor
 import io.github.gaboron.spwisland.core.BackgroundProgressMode
 import io.github.gaboron.spwisland.core.PlaybackSnapshot
 import io.github.gaboron.spwisland.core.PlaybackStatus
-import io.github.gaboron.spwisland.core.VerticalAnchor
 import io.github.gaboron.spwisland.core.performance
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
@@ -64,10 +63,10 @@ internal object IslandBackgroundProgress {
     private fun drawTopLine(g: Graphics2D, width: Int, height: Int, anchor: IslandAnchor,
                             progress: Double, visibility: Double, settings: IslandSettings,
                             palette: IslandPalette) {
-        val radius = if (settings.notch && anchor.vertical != VerticalAnchor.CENTER) 10.0
-            else minOf(width, height) / 2.0 * settings.cornerRoundness.coerceIn(0, 100) / 100.0
-        val start = radius.coerceAtLeast(2.0)
-        val end = (width - 1.0 - radius).coerceAtLeast(start)
+        val edgeInset = IslandGeometry.topEdgeInset(width, height, settings.notch,
+            settings.cornerRoundness, anchor)
+        val start = edgeInset.coerceAtLeast(2.0)
+        val end = (width - edgeInset).coerceAtLeast(start)
         val filledEnd = start + (end - start) * progress
         val stroke = g.stroke
         val paint = g.paint

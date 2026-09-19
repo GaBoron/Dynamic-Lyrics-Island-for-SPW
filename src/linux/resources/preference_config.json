@@ -54,7 +54,7 @@
           "type": "seekbar",
           "key": "corner_roundness",
           "title": "圆角大小 %",
-          "default_value": 60,
+          "default_value": 95,
           "min": 0,
           "max": 100,
           "summary": "0 为直角，100 为最大圆角；圆角会随词岛高度自动缩放。"
