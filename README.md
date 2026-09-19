@@ -1,4 +1,4 @@
-# Dynamic Lyrics Island for SPW
+# 灵动词岛 for SPW
 
 > 把 SPW 的歌词变成桌面顶部的灵动词岛。  
 > QQ 群：1054809039
