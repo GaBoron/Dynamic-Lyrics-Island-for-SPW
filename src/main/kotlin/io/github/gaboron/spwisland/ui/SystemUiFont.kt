@@ -4,15 +4,18 @@ package io.github.gaboron.spwisland.ui
 import io.github.gaboron.spwisland.core.LyricFontWeight
 import java.awt.Font
 import java.awt.GraphicsEnvironment
-import java.awt.font.TextAttribute
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 
 /** Creates plugin UI fonts from bundled Noto Sans SC weights and optional lyric-only custom fonts. */
 internal object SystemUiFont {
-    private val installedFamilies by lazy {
-        GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames
-            .associateBy { it.lowercase(Locale.ROOT) }
+    private data class InstalledFace(val font: Font, val weight: Int)
+
+    private val installedFonts by lazy {
+        GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.toList()
     }
+    private val installedFamilies = ConcurrentHashMap<String, List<InstalledFace>>()
     private val bundled by lazy {
         LyricFontWeight.entries.associateWith { weight ->
             val resource = fontResources.getValue(weight)
@@ -26,27 +29,70 @@ internal object SystemUiFont {
     fun derive(style: Int, size: Float): Font = bundled.getValue(LyricFontWeight.REGULAR).deriveFont(style, size)
 
     fun lyric(family: String, weight: LyricFontWeight, size: Float): Font {
-        val installed = installedFamilies[family.lowercase(Locale.ROOT)]
-            ?: return lyricFallback(weight, size)
-        return weighted(Font(installed, Font.PLAIN, size.toInt()), weight.attributeValue, size)
+        val requested = normalizeName(family)
+        if (requested.isEmpty()) return lyricFallback(weight, size)
+        val faces = installedFamilies.computeIfAbsent(requested) {
+            installedFonts.asSequence()
+                .filter { belongsToFamily(it, requested) && !it.isItalicFace }
+                .map { InstalledFace(it, it.inferredWeight) }
+                .distinctBy { it.font.psName }
+                .toList()
+        }
+        if (faces.isEmpty()) return lyricFallback(weight, size)
+        val target = weight.storageName.toInt()
+        val face = faces.minWith(compareBy<InstalledFace>(
+            { abs(it.weight - target) },
+            { if (target >= 500) -it.weight else it.weight }
+        ))
+        return face.font.deriveFont(size)
     }
 
     fun lyricFallback(weight: LyricFontWeight, size: Float): Font = bundled.getValue(weight).deriveFont(size)
 
-    private fun weighted(font: Font, weight: Any, size: Float): Font = font.deriveFont(
-        mapOf(TextAttribute.SIZE to size, TextAttribute.WEIGHT to weight)
+    private fun belongsToFamily(font: Font, requested: String): Boolean {
+        val fontFamily = normalizeName(font.getFamily(Locale.ROOT))
+        val fontName = normalizeName(font.getFontName(Locale.ROOT))
+        if (fontFamily == requested || fontName == requested) return true
+        val suffix = fontFamily.removePrefix("$requested ")
+        return suffix != fontFamily && suffix in weightFamilySuffixes
+    }
+
+    private val Font.isItalicFace: Boolean
+        get() {
+            val name = normalizeName("${getFontName(Locale.ROOT)} $psName")
+            return name.containsWord("italic") || name.containsWord("oblique")
+        }
+
+    private val Font.inferredWeight: Int
+        get() {
+            val name = normalizeName("${getFamily(Locale.ROOT)} ${getFontName(Locale.ROOT)} $psName")
+            return weightNames.firstOrNull { (marker, _) -> name.containsWord(marker) }?.second ?: 400
+        }
+
+    private fun String.containsWord(marker: String): Boolean =
+        this == marker || startsWith("$marker ") || endsWith(" $marker") || contains(" $marker ")
+
+    private fun normalizeName(name: String): String = name
+        .trim()
+        .lowercase(Locale.ROOT)
+        .replace(Regex("[-_]+"), " ")
+        .replace(Regex("\\s+"), " ")
+
+    private val weightNames = listOf(
+        "extra black" to 950, "ultra black" to 950,
+        "extra bold" to 800, "ultra bold" to 800, "extrabold" to 800, "ultrabold" to 800,
+        "semi bold" to 600, "demi bold" to 600, "semibold" to 600, "demibold" to 600,
+        "extra light" to 200, "ultra light" to 200, "extralight" to 200, "ultralight" to 200,
+        "semi light" to 350, "demi light" to 350, "semilight" to 350, "demilight" to 350,
+        "hairline" to 100, "thin" to 100,
+        "light" to 300,
+        "medium" to 500,
+        "black" to 900, "heavy" to 900,
+        "bold" to 700,
+        "regular" to 400, "normal" to 400, "book" to 400, "roman" to 400
     )
 
-    private val LyricFontWeight.attributeValue: Float
-        get() = when (this) {
-            LyricFontWeight.THIN -> TextAttribute.WEIGHT_EXTRA_LIGHT
-            LyricFontWeight.LIGHT -> TextAttribute.WEIGHT_LIGHT
-            LyricFontWeight.DEMI_LIGHT -> TextAttribute.WEIGHT_DEMILIGHT
-            LyricFontWeight.REGULAR -> TextAttribute.WEIGHT_REGULAR
-            LyricFontWeight.MEDIUM -> TextAttribute.WEIGHT_MEDIUM
-            LyricFontWeight.BOLD -> TextAttribute.WEIGHT_BOLD
-            LyricFontWeight.BLACK -> TextAttribute.WEIGHT_ULTRABOLD
-        }
+    private val weightFamilySuffixes = weightNames.mapTo(mutableSetOf()) { it.first }
 
     private val fontResources = mapOf(
         LyricFontWeight.THIN to "/fonts/NotoSansSC-Thin.otf",
