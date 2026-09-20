@@ -24,9 +24,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     private val listener = Consumer<ConfigHelper> { updated ->
         val loaded = synchronized(lock) {
             // SPW's settings page writes through a different helper; notification values can be cached.
-            if (closed || !updated.reload()) false else {
-                config = updated; accepted = decode(); true
-            }
+            if (closed) false else reloadPreservingPosition(updated)
         }
         if (loaded) changed()
     }
@@ -89,15 +87,44 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             val bytes = Files.readAllBytes(config.getConfigPath())
             if (bytes.isEmpty() || fingerprint?.contentEquals(bytes) == true) return
             // Failed/partial writes must not replace the last usable snapshot with defaults.
+            val retainedPosition = accepted?.positionState()
             if (!config.reload()) return
+            val positionRestored = restorePosition(retainedPosition)
             val normalized = normalizeIntegerSettings() or normalizeBackgroundProgressSetting()
-            if (normalized && !config.save()) return
+            if ((positionRestored || normalized) && !config.save()) return
             val value = decode()
-            fingerprint = if (normalized) Files.readAllBytes(config.getConfigPath()) else bytes
+            fingerprint = if (positionRestored || normalized) Files.readAllBytes(config.getConfigPath()) else bytes
             (value != accepted).also { accepted = value }
         }
         if (notify) changed()
     }
+
+    private fun reloadPreservingPosition(updated: ConfigHelper): Boolean {
+        val retainedPosition = accepted?.positionState()
+        if (!updated.reload()) return false
+        config = updated
+        val positionRestored = restorePosition(retainedPosition)
+        if (positionRestored && !config.save()) return false
+        accepted = decode()
+        fingerprint = null
+        return true
+    }
+
+    /** Position is plugin-owned state; SPW's settings form can write back a stale config snapshot. */
+    private fun restorePosition(retained: PositionState?): Boolean {
+        if (retained == null || decode().positionState() == retained) return false
+        config.set("screen", retained.screen)
+        config.set("position_x", retained.x ?: Int.MIN_VALUE)
+        config.set("position_y", retained.y ?: Int.MIN_VALUE)
+        config.set("position_anchor", retained.anchor?.storageName ?: "")
+        config.set("center_x", retained.legacyCenterX ?: Int.MIN_VALUE)
+        config.set("top", retained.legacyTop ?: Int.MIN_VALUE)
+        return true
+    }
+
+    private fun IslandSettings.positionState() = PositionState(
+        screen, positionX, positionY, positionAnchor, legacyCenterX, legacyTop
+    )
     private fun number(key: String, default: Int, min: Int, max: Int): Int {
         // Integer text fields coexist with numeric values saved by the original sliders.
         val text = config.get<Any>(key, "") as? String
@@ -178,6 +205,14 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     }
 
     private data class IntegerLimits(val default: Int, val first: Int, val last: Int)
+    private data class PositionState(
+        val screen: String,
+        val x: Int?,
+        val y: Int?,
+        val anchor: IslandAnchor?,
+        val legacyCenterX: Int?,
+        val legacyTop: Int?
+    )
 
     private companion object {
         val INTEGER_SETTINGS = mapOf(
