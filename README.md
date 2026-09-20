@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/main/resources/icons/application.png" width="96" alt="灵动词岛图标">
+  <img src="docs/assets/README-hero.png" width="320" alt="灵动词岛">
 </p>
 
 <h1 align="center">灵动词岛 for SPW</h1>
