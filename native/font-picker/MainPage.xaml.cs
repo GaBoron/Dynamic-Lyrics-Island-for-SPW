@@ -18,9 +18,11 @@ public sealed partial class MainPage : Page
 {
     private readonly IReadOnlyList<FontOption> _allFonts = FontCatalog.Load();
     private FontOption? _selectedFont;
+    private FontFace? _selectedFace;
     private PickerSession? _session;
 
     public ObservableCollection<FontOption> FilteredFonts { get; } = [];
+    public ObservableCollection<FontFace> SelectedFaces { get; } = [];
 
     public MainPage()
     {
@@ -32,12 +34,40 @@ public sealed partial class MainPage : Page
     {
         base.OnNavigatedTo(e);
         _session = (PickerSession)e.Parameter;
-        var initial = _allFonts.FirstOrDefault(font => string.Equals(
-            font.StorageName, _session.Options.FontFamily, StringComparison.CurrentCultureIgnoreCase)) ?? _allFonts[0];
-        SelectFont(initial);
-        FontList.SelectedItem = initial;
-        WeightSelector.SelectedIndex = FontWeightsModel.IndexOf(_session.Options.FontWeight);
-        DispatcherQueue.TryEnqueue(() => FontList.ScrollIntoView(initial));
+        var (font, face) = FindSelection(_session.Options.FontFamily, _session.Options.FontWeight);
+        FontList.SelectedItem = font;
+        SelectFont(font, face);
+        DispatcherQueue.TryEnqueue(() => FontList.ScrollIntoView(font));
+    }
+
+    private (FontOption Font, FontFace Face) FindSelection(string family, string weight)
+    {
+        var stored = family?.Trim() ?? string.Empty;
+        if (stored.Length > 0)
+        {
+            // A stored family name keeps its saved weight; a stored full face name selects that exact face.
+            foreach (var font in _allFonts)
+            {
+                if (string.Equals(font.StorageName, stored, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    return (font, PreferredFace(font, weight));
+                }
+            }
+            foreach (var font in _allFonts)
+            {
+                var face = font.Faces.FirstOrDefault(candidate =>
+                    string.Equals(candidate.StorageName, stored, StringComparison.CurrentCultureIgnoreCase));
+                if (face is not null) return (font, face);
+            }
+        }
+        var fallback = _allFonts[0];
+        return (fallback, PreferredFace(fallback, weight));
+    }
+
+    private static FontFace PreferredFace(FontOption font, string weight)
+    {
+        var target = int.TryParse(weight, out var parsed) ? parsed : 400;
+        return font.Faces.MinBy(face => Math.Abs(face.Weight - target)) ?? font.Faces[0];
     }
 
     private void ApplyFilter(string query)
@@ -54,7 +84,7 @@ public sealed partial class MainPage : Page
         FontCountText.Text = $"{FilteredFonts.Count} 项";
     }
 
-    private void SelectFont(FontOption font)
+    private void SelectFont(FontOption font, FontFace? preferred = null)
     {
         _selectedFont = font;
         PrimaryPreviewText.FontFamily = font.Family;
@@ -62,18 +92,59 @@ public sealed partial class MainPage : Page
         SelectedFontText.Text = font.IsBundled
             ? "内置 Noto Sans SC · 推荐默认"
             : $"{font.DisplayName} · 系统字体";
+        SelectedFaces.Clear();
+        foreach (var face in font.Faces) SelectedFaces.Add(face);
+        var target = preferred ?? PreferredFace(font, _session?.Options.FontWeight ?? "400");
+        WeightSelector.SelectedIndex = IndexOfFace(font.Faces, target);
         StatusInfoBar.Severity = InfoBarSeverity.Informational;
-        StatusInfoBar.Title = "字重说明";
-        StatusInfoBar.Message = "自定义字体会优先使用对应的真实字重；缺少所选档位时使用最接近的已有字重。";
+        StatusInfoBar.Title = "字型说明";
+        StatusInfoBar.Message = "只列出当前字体实际包含的字型；确认后词岛会直接使用所选的真实字面。";
     }
 
-    private void UpdateWeight()
+    private static int IndexOfFace(IReadOnlyList<FontFace> faces, FontFace target)
     {
-        if (WeightSelector?.SelectedItem is not ComboBoxItem item) return;
-        var weight = FontWeightsModel.ToFontWeight(item.Tag?.ToString());
-        PrimaryPreviewText.FontWeight = weight;
-        SecondaryPreviewText.FontWeight = weight;
+        for (var index = 0; index < faces.Count; index++)
+        {
+            var face = faces[index];
+            if (face.StorageName == target.StorageName && face.Weight == target.Weight && face.Italic == target.Italic)
+            {
+                return index;
+            }
+        }
+        return 0;
     }
+
+    private void UpdatePreview()
+    {
+        if (WeightSelector?.SelectedItem is not FontFace face) return;
+        _selectedFace = face;
+        var family = face.Family ?? _selectedFont?.Family;
+        if (family is not null)
+        {
+            PrimaryPreviewText.FontFamily = family;
+            SecondaryPreviewText.FontFamily = family;
+        }
+        var weight = WeightToFontWeight(face.Weight);
+        var style = face.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal;
+        PrimaryPreviewText.FontWeight = weight;
+        PrimaryPreviewText.FontStyle = style;
+        SecondaryPreviewText.FontWeight = weight;
+        SecondaryPreviewText.FontStyle = style;
+    }
+
+    private static Windows.UI.Text.FontWeight WeightToFontWeight(int weight) => weight switch
+    {
+        <= 150 => FontWeights.Thin,
+        <= 250 => FontWeights.ExtraLight,
+        <= 300 => FontWeights.Light,
+        <= 350 => FontWeights.SemiLight,
+        <= 450 => FontWeights.Normal,
+        <= 550 => FontWeights.Medium,
+        <= 650 => FontWeights.SemiBold,
+        <= 750 => FontWeights.Bold,
+        <= 850 => FontWeights.ExtraBold,
+        _ => FontWeights.Black
+    };
 
     private void FontSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
@@ -85,7 +156,8 @@ public sealed partial class MainPage : Page
 
     private void FontList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FontList.SelectedItem is FontOption font) SelectFont(font);
+        // ListView raises this again after the initial selection; keep the face resolved in OnNavigatedTo.
+        if (FontList.SelectedItem is FontOption font && !ReferenceEquals(font, _selectedFont)) SelectFont(font);
     }
 
     private void PreviewInput_TextChanged(object sender, TextChangedEventArgs e)
@@ -98,7 +170,7 @@ public sealed partial class MainPage : Page
 
     private void WeightSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (PrimaryPreviewText is not null) UpdateWeight();
+        if (PrimaryPreviewText is not null) UpdatePreview();
     }
 
     private void RestoreDefault_Click(object sender, RoutedEventArgs e)
@@ -112,10 +184,10 @@ public sealed partial class MainPage : Page
 
     private void Apply_Click(object sender, RoutedEventArgs e)
     {
-        if (_selectedFont is null || WeightSelector.SelectedItem is not ComboBoxItem item) return;
+        if (_selectedFace is null) return;
         _session?.Complete(new PickerSelection(
-            _selectedFont.StorageName,
-            FontWeightsModel.Normalize(item.Tag?.ToString())));
+            _selectedFace.StorageName,
+            FontWeightsModel.Nearest(_selectedFace.Weight)));
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)

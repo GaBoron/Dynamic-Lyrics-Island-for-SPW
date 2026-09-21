@@ -22,7 +22,7 @@
                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                        Text="LYRICS APPEARANCE" />
             <TextBlock FontSize="30" FontWeight="SemiBold" Text="选择歌词字体" />
-            <TextBlock MaxWidth="720"
+            <TextBlock HorizontalAlignment="Left"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Text="从已安装字体中选择歌词字体和字重，确认后立即应用到词岛。"
                        TextWrapping="Wrap" />
@@ -169,30 +169,23 @@
                                      TextChanged="PreviewInput_TextChanged" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Spacing="8">
-                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="歌词字重" />
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="字体字型" />
                             <ComboBox x:Name="WeightSelector"
                                       AutomationProperties.AutomationId="WeightSelector"
-                                      AutomationProperties.Name="歌词字重"
+                                      AutomationProperties.Name="字体字型"
+                                      DisplayMemberPath="DisplayName"
                                       HorizontalAlignment="Stretch"
-                                      SelectedIndex="3"
-                                      SelectionChanged="WeightSelector_SelectionChanged">
-                                <ComboBoxItem Tag="100">极细 100</ComboBoxItem>
-                                <ComboBoxItem Tag="300">细体 300</ComboBoxItem>
-                                <ComboBoxItem Tag="350">次细 350</ComboBoxItem>
-                                <ComboBoxItem Tag="400">常规 400</ComboBoxItem>
-                                <ComboBoxItem Tag="500">中等 500</ComboBoxItem>
-                                <ComboBoxItem Tag="700">粗体 700</ComboBoxItem>
-                                <ComboBoxItem Tag="900">极粗 900</ComboBoxItem>
-                            </ComboBox>
+                                      ItemsSource="{x:Bind SelectedFaces}"
+                                      SelectionChanged="WeightSelector_SelectionChanged" />
                         </StackPanel>
                     </Grid>
 
                     <InfoBar x:Name="StatusInfoBar"
                              IsClosable="False"
                              IsOpen="True"
-                             Message="自定义字体会优先使用对应的真实字重；缺少所选档位时使用最接近的已有字重。"
+                             Message="只列出当前字体实际包含的字型；确认后词岛会直接使用所选的真实字面。"
                              Severity="Informational"
-                             Title="字重说明" />
+                             Title="字型说明" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -23,6 +23,30 @@
              Link="Assets\NotoSansSC-Regular.otf"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-Thin.otf"
+             Link="Assets\NotoSansSC-Thin.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-Light.otf"
+             Link="Assets\NotoSansSC-Light.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-DemiLight.otf"
+             Link="Assets\NotoSansSC-DemiLight.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-Medium.otf"
+             Link="Assets\NotoSansSC-Medium.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-Bold.otf"
+             Link="Assets\NotoSansSC-Bold.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\src\main\resources\fonts\NotoSansSC-Black.otf"
+             Link="Assets\NotoSansSC-Black.otf"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

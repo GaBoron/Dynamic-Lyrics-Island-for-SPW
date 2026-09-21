@@ -91,7 +91,7 @@ tasks.register<Exec>("buildSpectrum") {
 tasks.register<Exec>("buildFontPicker") {
     val project = file("native/font-picker/IslandFontPicker.csproj")
     inputs.files(fileTree("native/font-picker") { exclude("bin/**", "obj/**") })
-    inputs.file("src/main/resources/fonts/NotoSansSC-Regular.otf")
+    inputs.files(fileTree("src/main/resources/fonts"))
     outputs.dir(fontPickerOutput)
     onlyIf {
         if (!isWindows) logger.lifecycle("Skipping the WinUI font picker on ${currentOs.name}")

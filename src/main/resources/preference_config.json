@@ -87,7 +87,7 @@
         {
           "type": "button",
           "title": "歌词字体与字重",
-          "summary": "打开字体选择器，搜索已安装字体并预览字重；内置字体提供 7 档真实字重。",
+          "summary": "打开字体选择器，搜索已安装字体，并从该字体实际包含的字型（常规、加粗、斜体及各档字重）中选择；内置字体提供 7 档真实字重。",
           "arrow_type": "arrow",
           "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.chooseFont"
         },

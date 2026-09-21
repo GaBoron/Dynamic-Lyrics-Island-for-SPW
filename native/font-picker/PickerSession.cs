@@ -45,6 +45,8 @@ internal static class FontWeightsModel
     private static readonly string[] Values = ["100", "300", "350", "400", "500", "700", "900"];
 
     public static string Normalize(string? value) => Values.Contains(value) ? value! : "400";
+    public static string Nearest(int weight) =>
+        Values.MinBy(value => Math.Abs(int.Parse(value) - weight)) ?? "400";
     public static int IndexOf(string? value) => Array.IndexOf(Values, Normalize(value));
     public static Windows.UI.Text.FontWeight ToFontWeight(string? value) => Normalize(value) switch
     {
