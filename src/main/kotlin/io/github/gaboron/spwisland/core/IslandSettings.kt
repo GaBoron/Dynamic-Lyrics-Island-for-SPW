@@ -44,6 +44,10 @@ data class IslandSettings(
 interface SettingsStore {
     fun read(): IslandSettings
     fun set(key: String, value: Any)
+    fun setFont(family: String, weight: LyricFontWeight) {
+        set("font_family", family)
+        set("font_weight", weight.storageName)
+    }
     fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor)
     fun resetPosition()
 }

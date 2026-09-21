@@ -8,6 +8,7 @@ import io.github.gaboron.spwisland.core.SpectrumMode
 import io.github.gaboron.spwisland.core.performance
 import io.github.gaboron.spwisland.ui.*
 import io.github.gaboron.spwisland.platform.ProcessSpectrum
+import io.github.gaboron.spwisland.platform.WindowsFontPicker
 import com.sun.jna.Platform
 import io.github.gaboron.spwisland.remote.LinuxIslandProcess
 import java.awt.KeyEventDispatcher
@@ -38,6 +39,9 @@ class IslandRuntime : AutoCloseable {
         updateSpectrumMode()
         if (!Platform.isLinux()) SwingUtilities.invokeLater { if (!closed) window?.reload() }
     }
+    private val fontPicker = if (Platform.isWindows()) WindowsFontPicker(
+        { family, weight -> settings.setFont(family, weight) }, ::report
+    ) else null
     private val keyboard = KeyEventDispatcher { e ->
         if (!closed && e.id == KeyEvent.KEY_RELEASED && e.keyCode == KeyEvent.VK_D &&
             e.isControlDown && e.isShiftDown && !e.isAltDown && !e.isMetaDown) {
@@ -78,6 +82,9 @@ class IslandRuntime : AutoCloseable {
         if (closed) return
         linuxWindow?.about() ?: SwingUtilities.invokeLater { if (!closed) window?.about() }
     }
+    fun chooseFont() {
+        if (!closed) fontPicker?.show(settings.read())
+    }
 
     fun openSource() { SwingUtilities.invokeLater { if (!closed) safely { ProjectLinks.openSource() } } }
     private fun safely(block: () -> Unit) { try { block() } catch (e: Exception) { report(e) } }
@@ -94,7 +101,7 @@ class IslandRuntime : AutoCloseable {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyboard)
         linuxWindow?.close(); linuxWindow = null
         try {
-            currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
+            fontPicker?.close(); currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
         } finally { if (window != null) onEdt { window?.close(); window = null } }
     }
     private fun onEdt(block: () -> Unit) {

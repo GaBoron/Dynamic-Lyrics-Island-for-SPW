@@ -19,6 +19,9 @@ require(targetPlatform == null || targetPlatform == "windows" || targetPlatform 
 val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
 val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
+val fontPickerOutput = layout.projectDirectory.dir(
+    "native/font-picker/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64"
+)
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
@@ -30,8 +33,12 @@ dependencies {
 }
 tasks.processResources {
     if (isWindows) {
-        dependsOn("buildSpectrum")
+        dependsOn("buildSpectrum", "buildFontPicker")
         from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
+        from(fontPickerOutput) {
+            into("native/font-picker")
+            exclude("*.pdb", "*.xml", "*.lib", "*.exp")
+        }
     } else if (isLinux) {
         exclude { it.file == file("src/main/resources/preference_config.json") }
         from("src/linux/resources")
@@ -55,7 +62,10 @@ tasks.register<Zip>("sourceArchive") {
     archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-source.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     from("src") { into("src") }
-    from("native") { into("native") }
+    from("native") {
+        into("native")
+        exclude("**/bin/**", "**/obj/**")
+    }
     from("gradle") { into("gradle") }
     from("licenses") { into("licenses") }
     from("docs") { into("docs") }
@@ -76,6 +86,22 @@ tasks.register<Exec>("buildSpectrum") {
     args("/nologo", "/target:winexe", "/platform:x64", "/optimize+", "/out:${output.get().asFile.absolutePath}",
         file("native/AudioInterop.cs").absolutePath, file("native/Spectrum.cs").absolutePath,
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
+}
+
+tasks.register<Exec>("buildFontPicker") {
+    val project = file("native/font-picker/IslandFontPicker.csproj")
+    inputs.files(fileTree("native/font-picker") { exclude("bin/**", "obj/**") })
+    inputs.file("src/main/resources/fonts/NotoSansSC-Regular.otf")
+    outputs.dir(fontPickerOutput)
+    onlyIf {
+        if (!isWindows) logger.lifecycle("Skipping the WinUI font picker on ${currentOs.name}")
+        isWindows
+    }
+    commandLine(
+        "dotnet", "build", project.absolutePath,
+        "-c", "Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
+        "--self-contained", "true"
+    )
 }
 
 fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) = tasks.register<Zip>(taskName) {

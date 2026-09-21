@@ -459,6 +459,7 @@ LyricPainter
 | `TimedKaraokeBoundary.kt` | 低性能模式下只计算当前逐字单元的高亮边界 |
 | `LyricGlow.kt` | 当前歌词强调和已唱歌词的辉光绘制 |
 | `SystemUiFont.kt` | 加载内置 Noto Sans SC 字重、自定义歌词字体及缺字 fallback |
+| `WindowsFontPicker.kt` | 启动 WinUI 字体选择器、解析选择结果并回写字体设置 |
 | `IslandContentLayout.kt` | 统一歌词、左侧内容、右侧状态和展开信息的水平内缩与最小尺寸 |
 
 文本的测量和实际绘制应使用同一套塑形结果，避免窗口尺寸与最终字形不一致。
@@ -585,6 +586,7 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/main/resources/META-INF/extensions.idx` | 显式注册 `IslandPlaybackExtension` |
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
 | `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
+| `native/font-picker/` | Windows WinUI 字体与字重选择器源码 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |
 | `settings.gradle.kts` | Gradle 项目名称和依赖仓库 |

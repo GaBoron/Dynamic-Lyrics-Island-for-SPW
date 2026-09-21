@@ -175,6 +175,10 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         return changed
     }
     override fun set(key: String, value: Any) = update { it.set(key, value) }
+    override fun setFont(family: String, weight: LyricFontWeight) = update {
+        it.set("font_family", family.take(100).trim())
+        it.set("font_weight", weight.storageName)
+    }
     override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) = update {
         it.set("screen", screen); it.set("position_x", x); it.set("position_y", y)
         it.set("position_anchor", anchor.storageName)

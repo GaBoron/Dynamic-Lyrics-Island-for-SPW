@@ -49,12 +49,19 @@ internal object SystemUiFont {
 
     fun lyricFallback(weight: LyricFontWeight, size: Float): Font = bundled.getValue(weight).deriveFont(size)
 
+    fun glyphFallback(reference: Font): Font {
+        val style = if (reference.inferredWeight >= 600) Font.BOLD else Font.PLAIN
+        return Font(Font.SANS_SERIF, style, reference.size.coerceAtLeast(1)).deriveFont(reference.size2D)
+    }
+
     private fun belongsToFamily(font: Font, requested: String): Boolean {
-        val fontFamily = normalizeName(font.getFamily(Locale.ROOT))
-        val fontName = normalizeName(font.getFontName(Locale.ROOT))
-        if (fontFamily == requested || fontName == requested) return true
-        val suffix = fontFamily.removePrefix("$requested ")
-        return suffix != fontFamily && suffix in weightFamilySuffixes
+        return sequenceOf(Locale.ROOT, Locale.getDefault()).any { locale ->
+            val fontFamily = normalizeName(font.getFamily(locale))
+            val fontName = normalizeName(font.getFontName(locale))
+            if (fontFamily == requested || fontName == requested) return@any true
+            val suffix = fontFamily.removePrefix("$requested ")
+            suffix != fontFamily && suffix in weightFamilySuffixes
+        }
     }
 
     private val Font.isItalicFace: Boolean
