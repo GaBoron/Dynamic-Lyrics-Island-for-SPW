@@ -23,5 +23,6 @@ internal class RemotePlayback : PlaybackSource {
         received = System.nanoTime()
     }
     @Synchronized override fun snapshot(): PlaybackSnapshot = value.copy(positionMs = value.positionMs +
-        if (value.playing) ((System.nanoTime() - received) / 1_000_000).coerceIn(0, 2500) else 0)
+        if (value.playing) (((System.nanoTime() - received) / 1_000_000.0).coerceIn(0.0, 2500.0) *
+            value.playbackRate).toLong() else 0)
 }

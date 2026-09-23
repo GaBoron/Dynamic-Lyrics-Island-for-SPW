@@ -4,7 +4,7 @@ package io.github.gaboron.spwisland.core
 /** Recovers a missing startup playing signal from consecutive host position heartbeats. */
 internal class PlaybackHeartbeatRecovery {
     companion object {
-        private const val MAX_HEARTBEAT_STEP_MS = 2_500L
+        private const val MAX_HEARTBEAT_STEP_MS = 5_000L
     }
 
     private var previousPosition: Long? = null

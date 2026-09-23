@@ -189,6 +189,13 @@
         },
         {
           "type": "button",
+          "title": "重置设置",
+          "summary": "将所有词岛设置、字体和位置恢复为默认值；设置页中的数值可能需要重新打开后才会更新。",
+          "arrow_type": "none",
+          "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.resetSettings"
+        },
+        {
+          "type": "button",
           "title": "找回词岛",
           "summary": "显示词岛、解除鼠标穿透并回到主屏幕顶部。",
           "arrow_type": "none",

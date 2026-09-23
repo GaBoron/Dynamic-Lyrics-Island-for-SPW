@@ -78,6 +78,7 @@ class IslandRuntime : AutoCloseable {
     fun recover() = safely {
         settings.set("click_through", false); settings.set("enabled", true); settings.resetPosition()
     }
+    fun resetSettings() = safely { settings.resetAll() }
     fun about() {
         if (closed) return
         linuxWindow?.about() ?: SwingUtilities.invokeLater { if (!closed) window?.about() }

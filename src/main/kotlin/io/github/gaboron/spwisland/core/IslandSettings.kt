@@ -50,4 +50,5 @@ interface SettingsStore {
     }
     fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor)
     fun resetPosition()
+    fun resetAll()
 }

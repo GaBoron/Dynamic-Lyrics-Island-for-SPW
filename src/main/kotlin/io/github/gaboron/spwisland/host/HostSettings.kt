@@ -16,6 +16,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     private val lock = Any()
     private var config = manager.getConfig("island.json")
     private var closed = false
+    private var replacingPosition = false
     private var accepted: IslandSettings? = null
     private var fingerprint: ByteArray? = null
     private val poller = Executors.newSingleThreadScheduledExecutor { task ->
@@ -100,7 +101,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     }
 
     private fun reloadPreservingPosition(updated: ConfigHelper): Boolean {
-        val retainedPosition = accepted?.positionState()
+        val retainedPosition = if (replacingPosition) null else accepted?.positionState()
         if (!updated.reload()) return false
         config = updated
         val positionRestored = restorePosition(retainedPosition)
@@ -179,24 +180,32 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         it.set("font_family", family.take(100).trim())
         it.set("font_weight", weight.storageName)
     }
-    override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) = update {
+    override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) = update(replacesPosition = true) {
         it.set("screen", screen); it.set("position_x", x); it.set("position_y", y)
         it.set("position_anchor", anchor.storageName)
         // Clear legacy center/top storage after the first drag on the automatic anchor model.
         it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE); it.set("vertical_anchor", "free")
     }
-    override fun resetPosition() = update {
+    override fun resetPosition() = update(replacesPosition = true) {
         it.set("screen", ""); it.set("position_x", Int.MIN_VALUE); it.set("position_y", Int.MIN_VALUE)
         it.set("position_anchor", ""); it.set("center_x", Int.MIN_VALUE); it.set("top", Int.MIN_VALUE)
         it.set("vertical_anchor", "free")
     }
-    private fun update(change: (ConfigHelper) -> Unit) {
+    override fun resetAll() = update(replacesPosition = true) { helper ->
+        IslandSettingsDefaults.values.forEach { (key, value) -> helper.set(key, value) }
+    }
+    private fun update(replacesPosition: Boolean = false, change: (ConfigHelper) -> Unit) {
         synchronized(lock) {
             if (closed) return
             // Preserve settings written by the host even if its notification has not arrived yet.
             if (Files.exists(config.getConfigPath())) check(config.reload()) { "词岛设置读取失败，未覆盖已有设置。" }
             change(config)
-            check(config.save()) { "词岛设置保存失败，请检查 SPW 配置目录权限。" }
+            replacingPosition = replacesPosition
+            try {
+                check(config.save()) { "词岛设置保存失败，请检查 SPW 配置目录权限。" }
+            } finally {
+                replacingPosition = false
+            }
             accepted = decode()
             fingerprint = null
         }

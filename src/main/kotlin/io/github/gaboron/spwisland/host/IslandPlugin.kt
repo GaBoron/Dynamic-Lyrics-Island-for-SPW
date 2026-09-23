@@ -35,6 +35,7 @@ class IslandPlugin(context: PluginContext) : SpwPlugin(context) {
         @JvmStatic @JvmName("recover") fun recover() { runtime?.recover() }
         @JvmStatic @JvmName("about") fun about() { runtime?.about() }
         @JvmStatic @JvmName("chooseFont") fun chooseFont() { runtime?.chooseFont() }
+        @JvmStatic @JvmName("resetSettings") fun resetSettings() { runtime?.resetSettings() }
         @JvmStatic @JvmName("openSource") fun openSource() { runtime?.openSource() }
     }
 }

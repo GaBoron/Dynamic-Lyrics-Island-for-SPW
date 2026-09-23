@@ -22,6 +22,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
     private var pendingSeek: Long? = null
     private var pendingSeekDeadline = 0L
     private val heartbeatRecovery = PlaybackHeartbeatRecovery()
+    private val rateTracker = PlaybackRateTracker()
 
     @Synchronized fun trackChanged(value: Track): Long {
         if (track != value) {
@@ -35,6 +36,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
             anchor = nanoTime()
             pendingSeek = null
             heartbeatRecovery.trackChanged()
+            rateTracker.reset()
         }
         return generation
     }
@@ -69,6 +71,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
             playing = true
             if (status == PlaybackStatus.IDLE) status = PlaybackStatus.READY
         }
+        rateTracker.positionChanged(next, now, playing && status == PlaybackStatus.READY)
         position = next
         anchor = now
     }
@@ -78,6 +81,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
         pendingSeek = position
         pendingSeekDeadline = anchor + SEEK_ACK_WINDOW_NS
         heartbeatRecovery.seeked()
+        rateTracker.discontinuity()
         // Await the host's replacement line; do not retain text from before a seek.
         line = null
     }
@@ -85,6 +89,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
         position = currentPosition()
         anchor = nanoTime()
         heartbeatRecovery.playingChanged()
+        rateTracker.discontinuity()
         playing = value
         if (value && status == PlaybackStatus.IDLE) status = PlaybackStatus.READY
     }
@@ -93,6 +98,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
         anchor = nanoTime()
         status = value
         heartbeatRecovery.stateChanged(value)
+        if (value != PlaybackStatus.READY) rateTracker.discontinuity()
         if (value == PlaybackStatus.IDLE || value == PlaybackStatus.ENDED) {
             playing = false
             line = null
@@ -105,7 +111,7 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
     @Synchronized override fun snapshot(): PlaybackSnapshot {
         val now = currentPosition()
         return PlaybackSnapshot(track, line, now, playing && status == PlaybackStatus.READY, status, metadata,
-            mergeLyrics(documentLyrics, callbackLyrics))
+            mergeLyrics(documentLyrics, callbackLyrics), rateTracker.rate)
     }
     private fun mergeLyrics(existing: List<LyricLine>, updates: List<LyricLine>): List<LyricLine> =
         updates.fold(existing) { lines, update ->
@@ -117,6 +123,6 @@ class PlaybackTimeline(private val nanoTime: () -> Long = System::nanoTime) : Pl
 
     private fun currentPosition(): Long = position + if (playing && status == PlaybackStatus.READY) {
         // Freeze on a missing host heartbeat rather than letting stale lyrics run indefinitely.
-        ((nanoTime() - anchor) / 1_000_000).coerceIn(0, 2500)
+        (((nanoTime() - anchor) / 1_000_000.0).coerceIn(0.0, 2500.0) * rateTracker.rate).toLong()
     } else 0
 }

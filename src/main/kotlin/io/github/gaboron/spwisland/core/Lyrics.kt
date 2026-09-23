@@ -25,7 +25,8 @@ enum class PlaybackStatus { IDLE, BUFFERING, READY, ENDED }
 data class PlaybackSnapshot(val track: Track?, val line: LyricLine?, val positionMs: Long,
                             val playing: Boolean, val status: PlaybackStatus,
                             val metadata: TrackMetadata = TrackMetadata(),
-                            val lyrics: List<LyricLine> = emptyList()) : java.io.Serializable {
+                            val lyrics: List<LyricLine> = emptyList(),
+                            val playbackRate: Double = 1.0) : java.io.Serializable {
     val usesWordTiming: Boolean = lyrics.ifEmpty { listOfNotNull(line) }.any { it.hasWordTimingEvidence }
 }
 
