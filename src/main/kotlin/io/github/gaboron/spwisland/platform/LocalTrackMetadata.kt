@@ -17,10 +17,12 @@ object LocalTrackMetadata {
     fun read(path: String): TrackMetadata {
         val file = File(path)
         if (!file.isFile) return TrackMetadata()
-        val audio = runCatching { AudioFileIO.read(file) }.getOrNull()
-        val duration = audio?.audioHeader?.preciseTrackLength
+        val opus = if (file.extension.equals("opus", ignoreCase = true))
+            runCatching { OpusFileMetadata.read(file) }.getOrNull() else null
+        val audio = if (opus == null) runCatching { AudioFileIO.read(file) }.getOrNull() else null
+        val duration = opus?.durationMs ?: audio?.audioHeader?.preciseTrackLength
             ?.takeIf { it.isFinite() && it > 0 }?.let { (it * 1000).roundToLong() } ?: 0
-        val embedded = runCatching { audio?.tag?.firstArtwork?.binaryData }.getOrNull()
+        val embedded = opus?.artwork ?: runCatching { audio?.tag?.firstArtwork?.binaryData }.getOrNull()
         val cover = embedded?.takeIf { it.size <= 16 * 1024 * 1024 }?.let { bytes ->
             runCatching { ByteArrayInputStream(bytes).use { decode(it) } }.getOrNull()
         } ?: sequenceOf("cover.jpg", "cover.png", "folder.jpg", "folder.png").mapNotNull { name ->
