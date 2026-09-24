@@ -18,22 +18,37 @@ internal sealed record NativeLyricsFrame(
 internal sealed class NativeLyricsTimeline
 {
     private long _revision = -1;
+    private long _clockRevision = -1;
     private long _changedAt;
+    private string? _track;
+    private NativeLyricsDocument? _document;
     private IReadOnlyList<NativeLyricRow> _rows = [];
     private IReadOnlyList<NativeLyricRow> _outgoing = [];
 
     public NativeLyricsFrame Frame(HostView view)
     {
         var lowPerformance = Flag(view.Settings, "lowPerformance");
+        var clockJumped = view.ClockRevision != _clockRevision;
+        _clockRevision = view.ClockRevision;
+        var track = view.Track?.GetRawText();
+        var trackChanged = _track != track;
+        _track = track;
+        if (clockJumped || trackChanged) _outgoing = [];
         if (view.LyricsRevision != _revision)
         {
-            var next = NativeLyricsSelection.Select(view);
-            var lineChanged = !SameLines(_rows, next);
-            _outgoing = lineChanged && !lowPerformance ? _rows : [];
-            _rows = next;
+            _document = NativeLyricsSelection.Prepare(view);
             _revision = view.LyricsRevision;
-            if (lineChanged) _changedAt = Stopwatch.GetTimestamp();
         }
+        var next = NativeLyricsSelection.Select(_document!, view.PositionMs);
+        var lineChanged = !SameLines(_rows, next);
+        if (lineChanged)
+        {
+            _outgoing = !lowPerformance && !clockJumped && !trackChanged ? _rows : [];
+            _changedAt = clockJumped
+                ? Stopwatch.GetTimestamp() - (long)(.65 * Stopwatch.Frequency)
+                : Stopwatch.GetTimestamp();
+        }
+        _rows = next;
         var elapsed = (Stopwatch.GetTimestamp() - _changedAt) / (double)Stopwatch.Frequency;
         var transition = lowPerformance ? 1 : Math.Clamp(elapsed / .65, 0, 1);
         var spring = transition >= 1 ? 1 : NativeAmllMotion.Line(transition * .65);

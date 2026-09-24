@@ -8,7 +8,7 @@ internal sealed record HostView(
     long PositionMs, bool Playing, string Status, double PlaybackRate,
     JsonElement? Track, JsonElement? Line, JsonElement? Lyrics,
     JsonElement? Metadata, JsonElement? Settings, JsonElement? Displays,
-    long LyricsRevision, float[] Spectrum);
+    long LyricsRevision, long ClockRevision, float[] Spectrum);
 
 // Owns the native process's playback clock. A future renderer reads this state locally.
 internal sealed class IslandHostState
@@ -26,13 +26,17 @@ internal sealed class IslandHostState
     private JsonElement? _settings;
     private JsonElement? _displays;
     private long _lyricsRevision;
+    private long _clockRevision;
     private readonly float[] _spectrum = new float[4];
 
     public void Accept(JsonElement message)
     {
         lock (_gate)
         {
-            _positionMs = message.GetProperty("positionMs").GetInt64();
+            var position = message.GetProperty("positionMs").GetInt64();
+            if (_anchorTicks != 0 && Math.Abs((double)position - CurrentPosition()) > 500)
+                _clockRevision++;
+            _positionMs = position;
             _playing = message.GetProperty("playing").GetBoolean();
             _status = message.GetProperty("status").GetString() ?? "IDLE";
             _rate = message.GetProperty("playbackRate").GetDouble();
@@ -71,7 +75,7 @@ internal sealed class IslandHostState
     {
         lock (_gate)
             return new HostView(CurrentPosition(), _playing, _status, _rate, _track, _line,
-                _lyrics, _metadata, _settings, _displays, _lyricsRevision,
+                _lyrics, _metadata, _settings, _displays, _lyricsRevision, _clockRevision,
                 (float[])_spectrum.Clone());
     }
 

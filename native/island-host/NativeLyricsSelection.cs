@@ -24,9 +24,13 @@ internal sealed record NativeLyricLine(long StartMs, long EndMs, string Text,
 internal sealed record NativeLyricRow(NativeLyricLine? Line, string Main, string? Translation,
     IReadOnlyList<NativeLyricWord> TimedWords);
 
+internal sealed record NativeLyricsDocument(NativeLyricLine? Current,
+    IReadOnlyList<NativeLyricLine> Lyrics, string? Title, bool Experimental,
+    bool Translation, bool SongUsesWordTiming);
+
 internal static class NativeLyricsSelection
 {
-    public static IReadOnlyList<NativeLyricRow> Select(HostView view)
+    public static NativeLyricsDocument Prepare(HostView view)
     {
         var settings = view.Settings;
         var experimental = Flag(settings, "experimentalMultiLine");
@@ -35,11 +39,20 @@ internal static class NativeLyricsSelection
         var lyrics = ParseLines(view.Lyrics);
         var songUsesWordTiming = (lyrics.Count > 0 ? lyrics : current is null ? [] : [current])
             .Any(line => line.HasWordTimingEvidence);
+        var title = view.Track is { } track && track.ValueKind == JsonValueKind.Object &&
+            track.TryGetProperty("title", out var name) ? name.GetString() : null;
+        return new NativeLyricsDocument(current, lyrics, title, experimental, translation,
+            songUsesWordTiming);
+    }
+
+    public static IReadOnlyList<NativeLyricRow> Select(NativeLyricsDocument document, long positionMs)
+    {
+        var current = document.Current;
         IReadOnlyList<NativeLyricLine> selected = current is null ? [] : [current];
-        if (experimental && lyrics.Count > 0)
+        if (document.Experimental && document.Lyrics.Count > 0)
         {
-            var reached = Math.Max(view.PositionMs, current?.StartMs ?? 0);
-            var started = lyrics.Where(line => !string.IsNullOrWhiteSpace(line.Text) &&
+            var reached = Math.Max(positionMs, current?.StartMs ?? 0);
+            var started = document.Lyrics.Where(line => !string.IsNullOrWhiteSpace(line.Text) &&
                 line.StartMs <= reached).ToList();
             if (started.Count > 0)
             {
@@ -50,14 +63,13 @@ internal static class NativeLyricsSelection
         }
         if (selected.Count == 0)
         {
-            var title = view.Track is { } track && track.ValueKind == JsonValueKind.Object &&
-                track.TryGetProperty("title", out var name) ? name.GetString() : null;
-            return [new NativeLyricRow(null, string.IsNullOrWhiteSpace(title) ? "SPW" : title!, null, [])];
+            return [new NativeLyricRow(null,
+                string.IsNullOrWhiteSpace(document.Title) ? "SPW" : document.Title!, null, [])];
         }
         return selected.Select(line => new NativeLyricRow(line,
             string.IsNullOrWhiteSpace(line.Text) ? "SPW" : line.Text,
-            translation && !string.IsNullOrWhiteSpace(line.Translation) ? line.Translation : null,
-            songUsesWordTiming ? line.TimedWords : [])).ToList();
+            document.Translation && !string.IsNullOrWhiteSpace(line.Translation) ? line.Translation : null,
+            document.SongUsesWordTiming ? line.TimedWords : [])).ToList();
     }
 
     private static bool Flag(JsonElement? settings, string key, bool fallback = false) =>
