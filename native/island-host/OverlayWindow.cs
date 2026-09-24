@@ -13,6 +13,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private const uint WmPaint = 0x000F, WmDestroy = 0x0002, WmClose = 0x0010;
     private const uint WmTimer = 0x0113, WmLButtonDown = 0x0201, WmLButtonUp = 0x0202;
     private const uint WmMouseMove = 0x0200, WmLButtonDblClk = 0x0203, WmRButtonUp = 0x0205;
+    private const uint WmCaptureChanged = 0x0215, WmCancelMode = 0x001F;
     private const uint WmNcActivate = 0x0086;
     private const uint WmDisplayChange = 0x007E;
     private const uint CsDblClks = 0x0008;
@@ -31,6 +32,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private bool _shown;
     private bool _hovered;
     private byte _alpha = 255;
+    private readonly OverlayHoverVisibility _hoverVisibility = new();
     private uint _timerDelay = 50;
     private long _nextTopmost;
     private string? _lastPosition;
@@ -140,9 +142,10 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             case WmLButtonUp:
                 if (_dragStart.Width > 0)
                 {
+                    var wasDragging = _dragging;
                     ReleaseCapture();
                     _dragStart = default;
-                    if (_dragging)
+                    if (wasDragging)
                     {
                         var point = new Point { X = _bounds.CenterX, Y = _bounds.CenterY };
                         var screen = Screen(point);
@@ -159,6 +162,15 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
                     }
                     _dragging = false;
                 }
+                return 0;
+            case WmCaptureChanged:
+                _dragStart = default;
+                _dragging = false;
+                return 0;
+            case WmCancelMode:
+                ReleaseCapture();
+                _dragStart = default;
+                _dragging = false;
                 return 0;
             case WmLButtonDblClk: commands.Toggle(); return 0;
             case WmRButtonUp:
@@ -232,7 +244,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             var hidden = clickThrough && Flag("autoHideOnHover") &&
                 cursor.X >= _bounds.X && cursor.X < _bounds.Right &&
                 cursor.Y >= _bounds.Y && cursor.Y < _bounds.Bottom;
-            _alpha = (byte)(hidden ? 0 : 255);
+            _alpha = _hoverVisibility.Update(hidden, Flag("lowPerformance"));
         }
         if (settings is { } placement && !_dragging)
         {
