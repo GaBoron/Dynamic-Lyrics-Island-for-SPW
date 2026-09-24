@@ -21,7 +21,7 @@
 
 ## 1. 项目概览
 
-Dynamic Lyrics Island for SPW 是运行在 Salt Player for Windows（SPW）Workshop API 上的歌词显示插件。
+灵动词岛 for SPW 是运行在 Salt Player for Windows（SPW）Workshop API 上的歌词显示插件。
 
 项目没有让 UI 直接依赖 SPW 的播放对象，而是在宿主与界面之间维护一层自己的播放模型。
 
