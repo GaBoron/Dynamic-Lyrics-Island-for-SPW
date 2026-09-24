@@ -3,10 +3,12 @@ package io.github.gaboron.spwisland.remote
 
 import io.github.gaboron.spwisland.core.PlaybackSource
 import io.github.gaboron.spwisland.core.SettingsStore
+import io.github.gaboron.spwisland.core.IslandAnchor
 import io.github.gaboron.spwisland.core.SpectrumMode
 import io.github.gaboron.spwisland.core.performance
 import io.github.gaboron.spwisland.platform.WindowsNativeRuntime
 import io.github.gaboron.spwisland.ui.PlaybackActions
+import java.awt.GraphicsEnvironment
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.UUID
@@ -14,6 +16,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToInt
 
 /** Keeps the native process alive while AWT remains the active Windows renderer. */
 internal class WindowsIslandProcess(
@@ -120,12 +123,36 @@ internal class WindowsIslandProcess(
         }
     }
 
-    private fun dispatch(command: IslandCommand) = when (command.action) {
+    private fun dispatch(command: IslandCommand) {
+        when (command.action) {
         "previous" -> actions.previous()
         "toggle" -> actions.toggle()
         "next" -> actions.next()
         "seek" -> command.arguments.singleOrNull()?.toLongOrNull()?.let(actions::seek)
+        "setting" -> if (command.arguments.size == 2) {
+            settings.set(command.arguments[0], command.arguments[1].toBooleanStrict())
+        }
+        "position" -> if (command.arguments.size == 6) {
+            val args = command.arguments
+            val anchor = IslandAnchor.fromStorage(args[3])
+            val nativeIndex = Regex("DISPLAY(\\d+)$", RegexOption.IGNORE_CASE)
+                .find(args[0])?.groupValues?.get(1)?.toIntOrNull()
+            val device = nativeIndex?.let { index ->
+                GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
+                    .firstOrNull { it.iDstring.endsWith("Display${index - 1}", ignoreCase = true) }
+            }
+            if (anchor != null && device != null) {
+                val config = device.defaultConfiguration
+                val bounds = config.bounds
+                val scale = config.defaultTransform
+                val x = bounds.x + ((args[1].toInt() - args[4].toInt()) / scale.scaleX).roundToInt()
+                val y = bounds.y + ((args[2].toInt() - args[5].toInt()) / scale.scaleY).roundToInt()
+                settings.savePosition(device.iDstring, x, y, anchor)
+            }
+        }
+        "resetPosition" -> settings.resetPosition()
         else -> Unit
+        }
     }
 
     override fun close() {

@@ -16,6 +16,18 @@ using var parent = Process.GetProcessById(parentId);
 using var cancellation = new CancellationTokenSource();
 var state = new IslandHostState();
 var commands = new HostCommandWriter(Console.Out);
+OverlayWindow? overlay = null;
+Thread? overlayThread = null;
+if (args.Contains("--window-preview"))
+{
+    overlay = new OverlayWindow(state, commands);
+    overlayThread = new Thread(() =>
+    {
+        try { overlay.Run(); }
+        catch (Exception error) { Console.Error.WriteLine(error); }
+    }) { IsBackground = true, Name = "SPW Island native window" };
+    overlayThread.Start();
+}
 var spectrum = SpectrumChannel.Receive(pipeName, state, cancellation.Token);
 var watcher = Task.Run(async () =>
 {
@@ -44,6 +56,8 @@ catch (Exception error) when (error is JsonException or IOException)
 }
 finally
 {
+    overlay?.Stop();
+    overlayThread?.Join(1000);
     cancellation.Cancel();
     try { await spectrum; } catch (OperationCanceledException) { }
     catch (EndOfStreamException) { }
