@@ -23,7 +23,8 @@ internal class WindowsIslandProcess(
     private val timeline: PlaybackSource,
     private val settings: SettingsStore,
     private val actions: PlaybackActions,
-    private val spectrumLevels: () -> FloatArray
+    private val spectrumLevels: () -> FloatArray,
+    private val runtimeNotice: (String) -> Unit
 ) : AutoCloseable {
     private val closed = AtomicBoolean()
     @Volatile private var process: Process? = null
@@ -35,9 +36,16 @@ internal class WindowsIslandProcess(
     private fun supervise() {
         var failures = 0
         var notified = false
+        var runtimeNoticeSent = false
         while (!closed.get()) {
             try {
                 if (!WindowsNativeRuntime.isReady()) {
+                    if (!runtimeNoticeSent && settings.read().enabled) {
+                        runtimeNoticeSent = true
+                        runCatching { runtimeNotice(
+                            "Windows 运行组件未就绪；打开字体选择器可查看安装说明。安装后将自动重试，当前词岛可继续使用。"
+                        ) }
+                    }
                     Thread.sleep(30_000)
                     continue
                 }

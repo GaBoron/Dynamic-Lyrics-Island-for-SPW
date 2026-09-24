@@ -71,7 +71,8 @@ class IslandRuntime : AutoCloseable {
                 spectrum::levels, spectrum::usesSyntheticFallback)
         }
         if (Platform.isWindows()) {
-            nativeWindow = WindowsIslandProcess(timeline, settings, actions, spectrum::levels)
+            nativeWindow = WindowsIslandProcess(timeline, settings, actions, spectrum::levels,
+                ::notifyWindowsRuntimeMissing)
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
@@ -99,6 +100,9 @@ class IslandRuntime : AutoCloseable {
         runCatching { WorkshopApi.ui.toast(error.message ?: "词岛操作失败", WorkshopApi.Ui.ToastType.Error) }
     }
     private fun notifySpectrumFallback(message: String) {
+        runCatching { WorkshopApi.ui.toast(message, WorkshopApi.Ui.ToastType.Warning) }
+    }
+    private fun notifyWindowsRuntimeMissing(message: String) {
         runCatching { WorkshopApi.ui.toast(message, WorkshopApi.Ui.ToastType.Warning) }
     }
     override fun close() {
