@@ -21,10 +21,10 @@
                        FontWeight="SemiBold"
                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
                        Text="LYRICS APPEARANCE" />
-            <TextBlock FontSize="30" FontWeight="SemiBold" Text="歌词字体与排版" />
+            <TextBlock FontSize="30" FontWeight="SemiBold" Text="选择歌词字体" />
             <TextBlock HorizontalAlignment="Left"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                       Text="选择字体与可用字型，细调字重和字号，实时预览词岛效果。"
+                       Text="从已安装字体中选择歌词字体和字重，确认后立即应用到词岛。"
                        TextWrapping="Wrap" />
         </StackPanel>
 
@@ -103,7 +103,7 @@
             </Border>
 
             <ScrollViewer x:Name="PreviewScroller" Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="16">
                     <Grid>
                         <StackPanel Spacing="3">
                             <TextBlock Style="{StaticResource SectionTitleStyle}" Text="歌词预览" />
@@ -117,8 +117,8 @@
                         </Border>
                     </Grid>
 
-                    <Border MinHeight="180"
-                            Padding="24"
+                    <Border MinHeight="250"
+                            Padding="34"
                             Background="#F20E1118"
                             BorderBrush="#28FFFFFF"
                             BorderThickness="1"
@@ -127,7 +127,7 @@
                             <Border HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     MaxWidth="650"
-                                    Padding="26,16"
+                                    Padding="30,22"
                                     Background="#F51B202B"
                                     BorderBrush="#25FFFFFF"
                                     BorderThickness="1"
@@ -148,62 +148,44 @@
                                                TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
+                            <TextBlock HorizontalAlignment="Center"
+                                       VerticalAlignment="Bottom"
+                                       Foreground="#8796A0AF"
+                                       FontSize="11"
+                                       Text="词岛效果示意 · 主歌词 24 px · 翻译 14 px" />
                         </Grid>
                     </Border>
 
-                    <Border Style="{StaticResource CardBorderStyle}" Padding="16">
-                        <StackPanel Spacing="11">
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="排版设置" />
-                            <Grid ColumnSpacing="20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="字形样式" />
-                                    <ComboBox x:Name="FaceSelector" HorizontalAlignment="Stretch"
-                                              AutomationProperties.Name="字形样式"
-                                              DisplayMemberPath="DisplayName"
-                                              ItemsSource="{x:Bind SelectedShapes}"
-                                              SelectionChanged="FaceSelector_SelectionChanged" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock Style="{StaticResource SectionTitleStyle}" Text="预览文本" />
-                                    <TextBox x:Name="PreviewInput" PlaceholderText="输入预览文本"
-                                             AutomationProperties.Name="预览文本"
-                                             Text="若深夜的风掠过海面"
-                                             TextChanged="PreviewInput_TextChanged" />
-                                </StackPanel>
-                            </Grid>
-                            <Grid ColumnSpacing="20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <Grid>
-                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="字重" />
-                                        <TextBlock x:Name="WeightValueText" HorizontalAlignment="Right"
-                                                   Style="{StaticResource MutedTextStyle}" />
-                                    </Grid>
-                                    <Slider x:Name="WeightSlider" Minimum="100" Maximum="900" StepFrequency="1"
-                                            AutomationProperties.Name="歌词字重"
-                                            ValueChanged="WeightSlider_ValueChanged" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <Grid>
-                                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="字号" />
-                                        <TextBlock x:Name="SizeValueText" HorizontalAlignment="Right"
-                                                   Style="{StaticResource MutedTextStyle}" />
-                                    </Grid>
-                                    <Slider x:Name="SizeSlider" Minimum="14" Maximum="42" StepFrequency="1"
-                                            AutomationProperties.Name="歌词字号"
-                                            ValueChanged="SizeSlider_ValueChanged" />
-                                </StackPanel>
-                            </Grid>
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="180" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="8">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="预览文本" />
+                            <TextBox x:Name="PreviewInput"
+                                     AutomationProperties.Name="预览文本"
+                                     Text="若深夜的风掠过海面"
+                                     TextChanged="PreviewInput_TextChanged" />
                         </StackPanel>
-                    </Border>
+                        <StackPanel Grid.Column="1" Spacing="8">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="字体字型" />
+                            <ComboBox x:Name="WeightSelector"
+                                      AutomationProperties.AutomationId="WeightSelector"
+                                      AutomationProperties.Name="字体字型"
+                                      DisplayMemberPath="DisplayName"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{x:Bind SelectedFaces}"
+                                      SelectionChanged="WeightSelector_SelectionChanged" />
+                        </StackPanel>
+                    </Grid>
 
+                    <InfoBar x:Name="StatusInfoBar"
+                             IsClosable="False"
+                             IsOpen="True"
+                             Message="只列出当前字体实际包含的字型；确认后词岛会直接使用所选的真实字面。"
+                             Severity="Informational"
+                             Title="字型说明" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>
@@ -212,7 +194,7 @@
             <Button AutomationProperties.AutomationId="RestoreDefaultButton"
                     AutomationProperties.Name="恢复插件内置字体"
                     Click="RestoreDefault_Click"
-                    Content="恢复默认" />
+                    Content="恢复内置字体" />
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="12">
                 <Button AutomationProperties.AutomationId="CancelButton"
                         AutomationProperties.Name="取消"
@@ -221,7 +203,7 @@
                 <Button AutomationProperties.AutomationId="ApplyButton"
                         AutomationProperties.Name="使用所选字体"
                         Click="Apply_Click"
-                        Content="应用设置"
+                        Content="使用此字体"
                         Style="{StaticResource AccentButtonStyle}" />
             </StackPanel>
         </Grid>

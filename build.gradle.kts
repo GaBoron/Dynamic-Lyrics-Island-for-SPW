@@ -19,6 +19,7 @@ require(targetPlatform == null || targetPlatform == "windows" || targetPlatform 
 val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
 val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
+val fontPickerOutput = layout.buildDirectory.dir("native/font-picker")
 val islandHostOutput = layout.buildDirectory.dir("native/island-host")
 dependencies {
     compileOnly(kotlin("stdlib"))
@@ -32,8 +33,13 @@ dependencies {
 }
 tasks.processResources {
     if (isWindows) {
-        dependsOn("buildSpectrum", "buildIslandHost")
+        dependsOn("buildSpectrum", "buildFontPicker", "buildIslandHost")
+        from("native/shared-fonts/MiSansVF.ttf") { into("fonts") }
         from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
+        from(fontPickerOutput) {
+            into("native/font-picker")
+            exclude("*.pdb", "*.xml", "*.lib", "*.exp")
+        }
         from(islandHostOutput) {
             into("native/island-host")
             exclude("*.pdb", "*.xml")
@@ -67,10 +73,7 @@ tasks.register<Zip>("sourceArchive") {
     }
     from("gradle") { into("gradle") }
     from("licenses") { into("licenses") }
-    from("docs") {
-        into("docs")
-        exclude("milestone-1-acceptance.md")
-    }
+    from("docs") { into("docs") }
     from("build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
         "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", ".gitignore")
 }
@@ -90,10 +93,26 @@ tasks.register<Exec>("buildSpectrum") {
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
 }
 
+tasks.register<Exec>("buildFontPicker") {
+    val project = file("native/font-picker/IslandFontPicker.csproj")
+    inputs.files(fileTree("native/font-picker") { exclude("bin/**", "obj/**") })
+    inputs.files(fileTree("src/main/resources/fonts"))
+    inputs.file("native/shared-fonts/MiSansVF.ttf")
+    outputs.dir(fontPickerOutput)
+    onlyIf {
+        if (!isWindows) logger.lifecycle("Skipping the WinUI font picker on ${currentOs.name}")
+        isWindows
+    }
+    commandLine(
+        "dotnet", "publish", project.absolutePath,
+        "-c", "Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
+        "--self-contained", "false", "-o", fontPickerOutput.get().asFile.absolutePath
+    )
+}
+
 tasks.register<Exec>("buildIslandHost") {
     val project = file("native/island-host/IslandHost.csproj")
     inputs.files(fileTree("native/island-host") { exclude("bin/**", "obj/**") })
-    inputs.files(fileTree("native/shared-fonts"))
     outputs.dir(islandHostOutput)
     onlyIf {
         if (!isWindows) logger.lifecycle("Skipping IslandHost on ${currentOs.name}")

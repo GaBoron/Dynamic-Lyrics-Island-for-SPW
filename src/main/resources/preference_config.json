@@ -86,10 +86,18 @@
         },
         {
           "type": "button",
-          "title": "歌词字体",
-          "summary": "打开字体与排版窗口，调整字体、字重、字号和斜体，并实时预览效果。",
+          "title": "歌词字体与字重",
+          "summary": "打开字体选择器，搜索已安装字体，并从该字体实际包含的字型（常规、加粗、斜体及各档字重）中选择；内置字体提供 7 档真实字重。",
           "arrow_type": "arrow",
           "on_click": "io.github.gaboron.spwisland.host.IslandPlugin.chooseFont"
+        },
+        {
+          "type": "seekbar",
+          "key": "font_size",
+          "title": "字号",
+          "default_value": 22,
+          "min": 14,
+          "max": 42
         },
         {
           "type": "seekbar",

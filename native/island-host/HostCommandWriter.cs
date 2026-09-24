@@ -13,9 +13,6 @@ internal sealed class HostCommandWriter(TextWriter output)
     public void Next() => Send("next");
     public void Seek(long positionMs) => Send("seek", Math.Max(0, positionMs));
     public void SetSetting(string key, bool value) => Write(new { type = "setting", key, value });
-    public void SetSetting(string key, string value) => Write(new { type = "setting", key, value });
-    public void ShowAbout() => Send("about");
-    public void OpenSource() => Send("source");
     public void SavePosition(string screen, int x, int y, string anchor, int monitorX, int monitorY) =>
         Write(new { type = "position", screen, x, y, anchor, monitorX, monitorY });
     public void ResetPosition() => Write(new { type = "resetPosition" });

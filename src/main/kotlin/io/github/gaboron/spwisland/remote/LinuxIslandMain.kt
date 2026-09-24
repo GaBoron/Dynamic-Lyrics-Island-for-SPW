@@ -23,7 +23,7 @@ object LinuxIslandMain {
             override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) =
                 send("position", screen, x.toString(), y.toString(), anchor.storageName)
             override fun resetPosition() = send("reset")
-            override fun resetAll() = send("resetAll")
+            override fun resetAll() = send("reset_all")
         }
         var window: IslandWindow? = null
         var lastHealth = 0L

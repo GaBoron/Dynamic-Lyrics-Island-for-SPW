@@ -28,9 +28,7 @@ data class IslandSettings(
     val fixedWidth: Boolean = false,
     val sideContent: SideContent = SideContent.COVER_SPECTRUM,
     val fontFamily: String = "",
-    val fontWeight: Int = 400,
-    val fontStyle: String = "normal",
-    val fontStretch: Int = 5,
+    val fontWeight: LyricFontWeight = LyricFontWeight.REGULAR,
     val fontSize: Int = 22,
     val maxWidth: Int = 640,
     val opacity: Int = 96,
@@ -46,12 +44,9 @@ data class IslandSettings(
 interface SettingsStore {
     fun read(): IslandSettings
     fun set(key: String, value: Any)
-    fun setFont(family: String, weight: Int, size: Int, style: String, stretch: Int) {
+    fun setFont(family: String, weight: LyricFontWeight) {
         set("font_family", family)
-        set("font_weight", weight)
-        set("font_size", size)
-        set("font_style", style)
-        set("font_stretch", stretch)
+        set("font_weight", weight.storageName)
     }
     fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor)
     fun resetPosition()

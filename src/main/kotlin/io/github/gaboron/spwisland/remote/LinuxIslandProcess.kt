@@ -67,7 +67,7 @@ class LinuxIslandProcess(private val timeline: PlaybackSource, private val setti
                 "position" -> settings.savePosition(a[0], a[1].toInt(), a[2].toInt(),
                     requireNotNull(IslandAnchor.fromStorage(a[3])))
                 "reset" -> settings.resetPosition()
-                "resetAll" -> settings.resetAll()
+                "reset_all" -> settings.resetAll()
                 "error" -> report(IllegalStateException(a.single()))
             }
         } catch (error: Exception) { report(error) }

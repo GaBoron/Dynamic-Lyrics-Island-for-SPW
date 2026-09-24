@@ -67,11 +67,10 @@ Used for the private Windows IslandHost protocol; the JAR is in lib/.
 Noto Sans CJK SC, Copyright 2014-2021 Adobe (http://www.adobe.com/),
 with Reserved Font Name "Source".
 https://github.com/notofonts/noto-cjk/tree/Sans2.004
-Unmodified static-weight OTFs under the SIL Open Font License 1.1
-(licenses/OFL-1.1-Noto-Sans-SC.txt). Retained for the Linux renderer and its UI.
+Unmodified OTF weights under the SIL Open Font License 1.1
+(licenses/OFL-1.1-Noto-Sans-SC.txt). Bundled for Linux lyrics and plugin UI text.
 
-MiSans Variable Font, Copyright Xiaomi Inc.
-https://hyperos.mi.com/font/zh/details/sc/
-Unmodified MiSansVF.ttf from the official MiSans download, embedded for the
-Windows native lyrics and font picker. The font's copyright and license
-agreement accompany the application (licenses/MiSans-License.pdf).
+MiSans VF, Copyright Xiaomi.
+https://hyperos.mi.com/font
+Bundled for default Windows lyric and plugin UI text, and the font picker preview.
+License terms accompany the distribution in licenses/MiSans-License.pdf.

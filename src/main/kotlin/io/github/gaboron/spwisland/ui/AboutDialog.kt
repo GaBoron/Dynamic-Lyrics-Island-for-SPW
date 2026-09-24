@@ -9,12 +9,8 @@ import java.awt.geom.RoundRectangle2D
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 
-private fun uiFont(style: Int, size: Float): Font =
-    if (com.sun.jna.Platform.isWindows()) Font("Segoe UI", style, size.toInt()).deriveFont(size)
-    else SystemUiFont.derive(style, size)
-
 /** Owns the modern, self-drawn project and licensing window. */
-internal class AboutDialog(private val owner: Window?, private val report: (Throwable) -> Unit) : AutoCloseable {
+internal class AboutDialog(private val owner: Window, private val report: (Throwable) -> Unit) : AutoCloseable {
     private data class Palette(
         val background: Color, val card: Color, val text: Color, val muted: Color,
         val accent: Color, val hover: Color, val border: Color
@@ -70,9 +66,6 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
                 "动画移植模块采用 AGPL-3.0-only\n" +
                 "github.com/amll-dev/applemusic-like-lyrics"))
             add(Box.createVerticalStrut(10))
-            add(card(colors, "Windows 歌词字体", "MiSans 可变字体由小米提供，已用于 Windows 原生词岛。\n" +
-                "字体授权和版权声明随插件提供。"))
-            add(Box.createVerticalStrut(10))
             add(card(colors, "许可说明", "其他程序：GPL-3.0-only · SPW API：Apache-2.0\n" +
                 "按两者第 13 条组合分发；完整许可、第三方声明及对应源码随插件 ZIP 提供。"))
         }
@@ -104,12 +97,12 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
             border = EmptyBorder(1, 15, 0, 0)
             add(JLabel(ApplicationIdentity.NAME).apply {
                 foreground = colors.text
-                font = uiFont(Font.BOLD, 20f)
+                font = SystemUiFont.derive(Font.BOLD, 20f)
             })
             add(Box.createVerticalStrut(3))
             add(JLabel("关于与许可 · for SPW").apply {
                 foreground = colors.muted
-                font = uiFont(Font.PLAIN, 12f)
+                font = SystemUiFont.derive(Font.PLAIN, 12f)
             })
         }, BorderLayout.CENTER)
         add(CloseButton(colors).apply { addActionListener { dialog.isVisible = false } }, BorderLayout.EAST)
@@ -124,7 +117,7 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
             columns = 42
             lineWrap = false
             foreground = colors.muted
-            font = uiFont(Font.PLAIN, 12f)
+            font = SystemUiFont.derive(Font.PLAIN, 12f)
             border = null
         }
         return AboutCard(colors).apply {
@@ -133,7 +126,7 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
             alignmentX = Component.LEFT_ALIGNMENT
             add(JLabel(title).apply {
                 foreground = colors.text
-                font = uiFont(Font.BOLD, 13f)
+                font = SystemUiFont.derive(Font.BOLD, 13f)
             }, BorderLayout.NORTH)
             add(text, BorderLayout.CENTER)
             val naturalHeight = preferredSize.height
@@ -144,7 +137,7 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
 
     private fun fitToWorkArea(dialog: JDialog) {
         dialog.pack()
-        val configuration = owner?.graphicsConfiguration
+        val configuration = owner.graphicsConfiguration
             ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
         val bounds = configuration.bounds
         val insets = Toolkit.getDefaultToolkit().getScreenInsets(configuration)
@@ -166,7 +159,7 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
         border = EmptyBorder(0, 28, 22, 28)
         add(JLabel("在适用法律允许范围内不提供担保，可按对应许可证再分发。").apply {
             foreground = colors.muted
-            font = uiFont(Font.PLAIN, 11f)
+            font = SystemUiFont.derive(Font.PLAIN, 11f)
             alignmentX = Component.LEFT_ALIGNMENT
         })
         add(Box.createVerticalStrut(12))
@@ -314,7 +307,7 @@ internal class AboutDialog(private val owner: Window?, private val report: (Thro
             isContentAreaFilled = false
             isBorderPainted = false
             foreground = if (primary) colors.background else colors.text
-            font = uiFont(Font.PLAIN, 12f)
+            font = SystemUiFont.derive(Font.PLAIN, 12f)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
         override fun paintComponent(graphics: Graphics) {

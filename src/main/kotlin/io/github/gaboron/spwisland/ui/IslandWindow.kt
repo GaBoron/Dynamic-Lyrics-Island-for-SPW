@@ -3,6 +3,7 @@ package io.github.gaboron.spwisland.ui
 
 import com.sun.jna.Platform
 import io.github.gaboron.spwisland.core.*
+import io.github.gaboron.spwisland.platform.WindowsOverlay
 import io.github.gaboron.spwisland.platform.X11InputRegion
 import java.awt.*
 import java.awt.event.*
@@ -39,7 +40,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
         iconImage = ApplicationIdentity.icon
         // GNOME/Mutter can throttle an application's utility surfaces together with its
         // obscured main window. Keep the Linux overlay an independent normal top-level.
-        type = Window.Type.NORMAL
+        type = if (Platform.isLinux()) Window.Type.NORMAL else Window.Type.UTILITY
         isAlwaysOnTop = true
         focusableWindowState = false; isAutoRequestFocus = false
         background = Color(0, 0, 0, 0)
@@ -50,12 +51,19 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
     private val panel = IslandPanel(actions)
     private val surface = IslandSurface(panel)
     private val hoverVisibility = IslandHoverVisibility()
+    private val native = WindowsOverlay()
     private val inputRegion = if (Platform.isLinux() && Toolkit.getDefaultToolkit().javaClass.name.contains("XToolkit"))
         runCatching { X11InputRegion() }.onFailure(report).getOrNull() else null
-    private val stableTranslucentCanvas = window.graphicsConfiguration.isTranslucencyCapable
+    private val stableTranslucentCanvas = Platform.isWindows() || window.graphicsConfiguration.isTranslucencyCapable
     private val menu = IslandMenu(store, report, window)
     private var settings = store.read()
+    private var nativeAvailable = true
+    private var clickThroughApplied: Boolean? = null
     @Volatile private var closed = false
+    private var fullscreen = false
+    private var nextScreenCheck = 0L
+    private var nextTopmostCheck = 0L
+    private var topmostAvailable = true
     private var lastFrame = System.nanoTime()
     private var lastLines: List<LyricLine> = emptyList()
     private var previousSnapshot: PlaybackSnapshot? = null
@@ -83,6 +91,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
         window.setSize(width.toInt(), height.toInt())
         panel.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
+                if (!Platform.isLinux() && e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (SwingUtilities.isLeftMouseButton(e) && !settings.clickThrough) {
                     press = e.locationOnScreen
                     dragOrigin = Point(window.x + panel.x, window.y + panel.y)
@@ -91,6 +100,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
                 }
             }
             override fun mouseReleased(e: MouseEvent) {
+                if (!Platform.isLinux() && e.isPopupTrigger) menu.popup(panel, e.x, e.y)
                 if (dragging) {
                     val topLeft = dragTopLeft ?: Point(window.x + panel.x, window.y + panel.y)
                     val current = Rectangle(topLeft.x, topLeft.y, panel.width, panel.height)
@@ -137,7 +147,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
     }
     fun reload() {
         if (closed) return
-        settings = store.read(); dragTopLeft = null; dragAnchor = null
+        settings = store.read(); dragTopLeft = null; dragAnchor = null; nextScreenCheck = 0
         tick()
     }
     fun about() = menu.about()
@@ -149,7 +159,7 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
         val dt = ((now - lastFrame) / 1_000_000_000.0).coerceIn(0.0, .1)
         lastFrame = now
         val performance = settings.performance
-        val clickThrough = false
+        val clickThrough = settings.clickThrough && native.supportsClickThrough
         val snap = timeline.snapshot()
         panel.settings = settings; panel.snapshot = snap
         val levels = if (!snap.playing || !settings.sideContent.showsSpectrum) FloatArray(4)
@@ -224,7 +234,12 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
             input.update(window, shape, listOf(panel.bounds, settings.notch, settings.cornerRoundness,
                 placementAnchor, scale.scaleX, scale.scaleY))
         }
-        val visible = settings.enabled && (!settings.hidePaused || snap.playing)
+        if (nativeAvailable && now >= nextScreenCheck) {
+            try { fullscreen = settings.hideFullscreen && native.foregroundIsFullscreen(window) }
+            catch (error: Exception) { nativeAvailable = false; fullscreen = false; report(error) }
+            nextScreenCheck = now + performance.screenCheckIntervalNs
+        }
+        val visible = settings.enabled && (!settings.hidePaused || snap.playing) && (!settings.hideFullscreen || !fullscreen)
         val hoverRegion = java.awt.geom.AffineTransform.getTranslateInstance(
             islandBounds.x.toDouble(), islandBounds.y.toDouble()
         ).createTransformedShape(IslandGeometry.silhouette(panel.width, panel.height, settings.notch,
@@ -235,6 +250,16 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
             !performance.animateLayout)
         if (window.isVisible != visible) {
             window.isVisible = visible
+            nextTopmostCheck = 0
+        }
+        if (visible && topmostAvailable && now >= nextTopmostCheck) {
+            try { native.reinforceTopmost(window) }
+            catch (error: Exception) { topmostAvailable = false; report(error) }
+            nextTopmostCheck = now + performance.topmostCheckIntervalNs
+        }
+        if (nativeAvailable && clickThroughApplied != clickThrough) {
+            try { native.clickThrough(window, clickThrough); clickThroughApplied = clickThrough }
+            catch (error: Exception) { nativeAvailable = false; report(error) }
         }
         if (visible) {
             if (Platform.isLinux()) {
