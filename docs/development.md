@@ -100,7 +100,7 @@ Linux 将界面放进独立 JVM，主要是为了隔离宿主的 Skiko/AWT 状�
 | `host/` | SPW / PF4J 生命周期、宿主回调、配置保存和宿主兼容 |
 | `ui/` | 窗口、布局、歌词绘制、动画、菜单和交互 |
 | `platform/` | Windows、X11、本地文件、系统主题、音频辅助进程等平台能力 |
-| `remote/` | Linux 宿主与独立界面 JVM 之间的通信 |
+| `remote/` | Windows / Linux 宿主与独立进程之间的通信 |
 
 依赖方向应尽量保持：
 
@@ -238,11 +238,16 @@ TrackMetadata
 
 ### 3.5 Windows UI
 
-Windows 上 `IslandRuntime` 直接创建 `IslandWindow`。
+Windows 迁移期间，`IslandRuntime` 仍创建现有 `IslandWindow` 负责显示，同时启动独立的 `IslandHost.exe` 验证原生进程边界。此阶段 IslandHost 尚不绘制词岛；后续窗口和渲染迁移会接在现有通信通道上。
 
 ```text
 PlaybackTimeline
- ↓ snapshot()
+ ├─ snapshot() → IslandWindow
+ └─ 状态差量 → WindowsIslandProcess → IslandHost.exe
+                                  └─ 本地播放时钟
+频谱 → 独立命名管道 → IslandHost.exe
+原生播放命令 → WindowsIslandProcess → SPW Playback API
+
 IslandWindow
  ↓
 IslandPanel
@@ -254,6 +259,8 @@ IslandPanel
 ```
 
 `IslandWindow` 负责窗口生命周期和整体状态，不负责具体歌词绘制。
+
+Windows 控制通道使用父子进程标准流上的逐行 JSON，带协议版本握手。歌曲、歌词、播放状态和设置只在变化时发送；播放中最多每秒校准一次位置，原生端用单调时钟推进。频谱使用单独的固定长度二进制管道，低性能模式不发送实时频谱。插件退出时关闭子进程；子进程异常退出时按间隔自动重启并重新发送完整状态。
 
 ### 3.6 Linux UI
 
@@ -351,7 +358,7 @@ Windows 和 Linux 使用不同的 `preference_config.json`，用于隐藏对应�
 | `HostSettings.kt` | 将 SPW `ConfigManager` 适配为 `SettingsStore`，负责读取、保存、同步和旧配置迁移 |
 | `IslandPlaybackExtension.kt` | 接收 SPW `PlaybackExtensionPoint` 回调并转换为项目自己的模型 |
 | `IslandPlugin.kt` | PF4J 插件生命周期；创建和释放唯一的 `IslandRuntime`，并提供配置页按钮入口 |
-| `IslandRuntime.kt` | 宿主侧组合根；组装时间轴、设置、元数据、频谱、窗口、Linux 远程 UI 和播放操作 |
+| `IslandRuntime.kt` | 宿主侧组合根；组装时间轴、设置、元数据、频谱、窗口、平台远程 UI 和播放操作 |
 | `PlaybackCallbackBridge.kt` | 暂存运行实例建立之前到达的播放回调，并在 runtime 就绪后转交 |
 | `TrackMetadataLoader.kt` | 单后台工作线程读取当前曲目的本地元数据；新曲目请求优先，旧结果通过代次检查丢弃 |
 
@@ -391,15 +398,18 @@ Windows 和 Linux 使用不同的 `preference_config.json`，用于隐藏对应�
 
 平台功能不要直接加入 `core/`。
 
-### 4.4 `remote/`：Linux 独立界面通信
+### 4.4 `remote/`：独立进程通信
 
 | 文件 | 职责 |
 | --- | --- |
 | `IslandWire.kt` | 定义宿主与子 JVM 之间的 `IslandState`、`IslandCommand`，以及子进程使用的 `RemotePlayback` |
 | `LinuxIslandProcess.kt` | 宿主侧独立界面进程管理；发送播放状态和设置，接收播放/seek/设置等命令 |
 | `LinuxIslandMain.kt` | Linux 子 JVM 入口；接收状态、创建 `IslandWindow` 并把用户操作传回宿主 |
+| `WindowsIslandWire.kt` | Windows 逐行 JSON 协议；编码状态差量并解析原生播放命令 |
+| `WindowsIslandProcess.kt` | 启动、监测和重启 IslandHost；连接 SPW 播放操作 |
+| `WindowsSpectrumPipe.kt` | 向 IslandHost 发送独立的四通道二进制频谱帧 |
 
-该通道使用父子进程匿名管道，不提供网络接口。
+控制通道使用父子进程匿名管道，不提供网络接口。Windows 频谱另走随机命名的本机管道。
 
 ### 4.5 `ui/`：窗口与几何
 
@@ -587,6 +597,7 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
 | `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
 | `native/font-picker/` | Windows WinUI 字体与字型选择器源码 |
+| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口和频谱接收端 |
 | `WindowsNativeRuntime.kt` | 检查本机 .NET Desktop 与 Windows App SDK 运行组件，供 Windows 原生界面共用 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |

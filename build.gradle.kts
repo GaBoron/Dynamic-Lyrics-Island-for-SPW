@@ -20,6 +20,7 @@ val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
 val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
 val fontPickerOutput = layout.buildDirectory.dir("native/font-picker")
+val islandHostOutput = layout.buildDirectory.dir("native/island-host")
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
@@ -27,15 +28,20 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.17.0")
     implementation("net.java.dev.jna:jna-platform:5.17.0")
     implementation("net.jthink:jaudiotagger:3.0.1")
+    implementation("com.google.code.gson:gson:2.13.2")
     metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
 }
 tasks.processResources {
     if (isWindows) {
-        dependsOn("buildSpectrum", "buildFontPicker")
+        dependsOn("buildSpectrum", "buildFontPicker", "buildIslandHost")
         from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
         from(fontPickerOutput) {
             into("native/font-picker")
             exclude("*.pdb", "*.xml", "*.lib", "*.exp")
+        }
+        from(islandHostOutput) {
+            into("native/island-host")
+            exclude("*.pdb", "*.xml")
         }
     } else if (isLinux) {
         exclude { it.file == file("src/main/resources/preference_config.json") }
@@ -100,6 +106,19 @@ tasks.register<Exec>("buildFontPicker") {
         "-c", "Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
         "--self-contained", "false", "-o", fontPickerOutput.get().asFile.absolutePath
     )
+}
+
+tasks.register<Exec>("buildIslandHost") {
+    val project = file("native/island-host/IslandHost.csproj")
+    inputs.files(fileTree("native/island-host") { exclude("bin/**", "obj/**") })
+    outputs.dir(islandHostOutput)
+    onlyIf {
+        if (!isWindows) logger.lifecycle("Skipping IslandHost on ${currentOs.name}")
+        isWindows
+    }
+    commandLine("dotnet", "publish", project.absolutePath,
+        "-c", "Release", "-p:RuntimeIdentifier=win-x64",
+        "--self-contained", "false", "-o", islandHostOutput.get().asFile.absolutePath)
 }
 
 fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) = tasks.register<Zip>(taskName) {

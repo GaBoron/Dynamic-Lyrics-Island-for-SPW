@@ -11,6 +11,7 @@ import io.github.gaboron.spwisland.platform.ProcessSpectrum
 import io.github.gaboron.spwisland.platform.WindowsFontPicker
 import com.sun.jna.Platform
 import io.github.gaboron.spwisland.remote.LinuxIslandProcess
+import io.github.gaboron.spwisland.remote.WindowsIslandProcess
 import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.KeyEvent
@@ -33,6 +34,7 @@ class IslandRuntime : AutoCloseable {
     }
     private var window: IslandWindow? = null
     private var linuxWindow: LinuxIslandProcess? = null
+    private var nativeWindow: WindowsIslandProcess? = null
     private val spectrum = ProcessSpectrum(::notifySpectrumFallback)
     @Volatile private var closed = false
     private val settings = HostSettings(WorkshopApi.manager.createConfigManager()) {
@@ -68,6 +70,9 @@ class IslandRuntime : AutoCloseable {
             window = IslandWindow(timeline, settings, actions, ::report,
                 spectrum::levels, spectrum::usesSyntheticFallback)
         }
+        if (Platform.isWindows()) {
+            nativeWindow = WindowsIslandProcess(timeline, settings, actions, spectrum::levels)
+        }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
     private fun updateSpectrumMode() {
@@ -101,6 +106,7 @@ class IslandRuntime : AutoCloseable {
         closed = true
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyboard)
         linuxWindow?.close(); linuxWindow = null
+        nativeWindow?.close(); nativeWindow = null
         try {
             fontPicker?.close(); currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
         } finally { if (window != null) onEdt { window?.close(); window = null } }

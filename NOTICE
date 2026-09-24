@@ -57,6 +57,11 @@ Unmodified library under LGPL-2.1-or-later (licenses/LGPL-2.1.txt).
 Used only for local metadata reading. The replaceable library JAR is in lib/;
 its corresponding upstream source JAR is included in source/.
 
+Gson 2.13.2, Copyright Google LLC and contributors.
+https://github.com/google/gson
+Unmodified library under Apache-2.0 (licenses/Apache-2.0.txt).
+Used for the private Windows IslandHost protocol; the JAR is in lib/.
+
 Noto Sans CJK SC, Copyright 2014-2021 Adobe (http://www.adobe.com/),
 with Reserved Font Name "Source".
 https://github.com/notofonts/noto-cjk/tree/Sans2.004
