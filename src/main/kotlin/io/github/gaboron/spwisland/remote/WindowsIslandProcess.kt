@@ -41,7 +41,15 @@ internal class WindowsIslandProcess(
                     Thread.sleep(30_000)
                     continue
                 }
-                runSession()
+                val sessionStarted = System.nanoTime()
+                try {
+                    runSession()
+                } finally {
+                    if (System.nanoTime() - sessionStarted >= 30_000_000_000L) {
+                        failures = 0
+                        notified = false
+                    }
+                }
                 if (!closed.get()) error("IslandHost 已退出")
             } catch (error: InterruptedException) {
                 if (closed.get()) return
