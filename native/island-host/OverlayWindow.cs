@@ -6,8 +6,7 @@ using static IslandHost.OverlayWin32;
 
 namespace IslandHost;
 
-// The native window is opt-in until the native lyric renderer can replace AWT.
-// Its window policy is independent of the future text and artwork renderer.
+// Window policy and input remain separate from text and artwork rendering.
 internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter commands)
 {
     private const uint WmPaint = 0x000F, WmDestroy = 0x0002, WmClose = 0x0010;
@@ -17,7 +16,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private const uint WmNcActivate = 0x0086;
     private const uint WmDisplayChange = 0x007E;
     private const uint CsDblClks = 0x0008;
-    private const uint MfString = 0, MfChecked = 8, MfSeparator = 0x800;
+    private const uint MfString = 0, MfGrayed = 1, MfChecked = 8, MfSeparator = 0x800;
     private const uint TpmReturnCmd = 0x100, TpmRightButton = 2;
     private const uint SwpNoMove = 2, SwpNoSize = 1;
     private const int BaseWidth = 300, BaseHoverMargin = 18;
@@ -38,16 +37,18 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private string? _lastPosition;
     private NativeLyricsCanvas? _canvas;
     private OverlayLayeredSurface? _surface;
+    private IslandTrayIcon? _tray;
     private readonly NativeLyricsTimeline _lyrics = new();
     private int _contentHeight = 58;
+    private int _contentWidth = BaseWidth;
     private uint _dpi = 96;
-    private int Width => Scale(BaseWidth);
+    private int Width => Scale(_contentWidth);
     private int Height => Scale(_contentHeight);
     private int ExpandedHeight => Scale(_contentHeight + 42);
     private int HoverMargin => Scale(BaseHoverMargin);
     private int Scale(int value) => (int)Math.Round(value * _dpi / 96.0);
 
-    public void Run()
+    public void Run(Action ready)
     {
         _canvas = new NativeLyricsCanvas();
         _surface = new OverlayLayeredSurface();
@@ -68,8 +69,11 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             ClassName, "动态歌词岛", WsPopup, _bounds.X, _bounds.Y, Width, Height,
             0, 0, instance, 0);
         if (_hwnd == 0) throw new InvalidOperationException("无法创建词岛窗口");
+        _tray = new IslandTrayIcon(_hwnd);
+        _tray.Add();
         UpdateDpi(_hwnd);
         SetTimer(_hwnd, 1, 33, 0);
+        ready();
         try
         {
             while (GetMessageW(out var message, 0, 0, 0) > 0)
@@ -80,6 +84,8 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
         }
         finally
         {
+            _tray?.Dispose();
+            _tray = null;
             _canvas?.Dispose();
             _surface?.Dispose();
             KillTimer(_hwnd, 1);
@@ -96,6 +102,10 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
 
     private nint HandleMessage(nint hwnd, uint message, nuint wParam, nint lParam)
     {
+        if (_tray?.Handle(message, lParam,
+            () => commands.SetSetting("enabled", !Setting("enabled", true)),
+            () => { if (GetCursorPos(out var point)) ShowMenu(hwnd, point, true); }) == true)
+            return 0;
         switch (message)
         {
             case WmNcActivate: return 1;
@@ -189,9 +199,13 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
         var settings = view.Settings;
         var frame = _lyrics.Frame(view);
         _contentHeight = _canvas?.ContentHeight(frame, settings) ?? 58;
+        var targetWidth = _canvas?.ContentWidth(frame, settings) ?? BaseWidth;
+        if (_hovered) targetWidth = Math.Max(targetWidth, _contentWidth);
         bool Flag(string name, bool fallback = false) =>
             settings is { } json && json.TryGetProperty(name, out var value) ? value.GetBoolean() : fallback;
         var delay = Flag("lowPerformance") ? 100u : 33u;
+        _contentWidth = Flag("lowPerformance") ? targetWidth :
+            _contentWidth + Math.Clamp(targetWidth - _contentWidth, -16, 16);
         if (delay != _timerDelay)
         {
             KillTimer(hwnd, 1);
@@ -232,7 +246,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
                 var desired = _hovered ? ExpandedHeight : Height;
                 var nextHeight = Flag("lowPerformance") ? desired :
                     _bounds.Height + Math.Clamp(desired - _bounds.Height, -16, 16);
-                if (nextHeight != _bounds.Height)
+                if (nextHeight != _bounds.Height || Width != _bounds.Width)
                 {
                     var fixedPoint = OverlayPlacement.FixedPoint(_bounds, _anchor);
                     var next = OverlayPlacement.Place(Screen(cursor).Work, fixedPoint.X, fixedPoint.Y,
@@ -262,8 +276,8 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
         }
         if (_canvas is not null && _surface is not null)
         {
-            var pixels = _canvas.Render(frame, settings, _bounds.Width, _bounds.Height,
-                _dpi / 96f, _hovered);
+            var pixels = _canvas.Render(frame, view, _bounds.Width, _bounds.Height,
+                _dpi / 96f, _hovered, _anchor);
             _surface.Present(hwnd, _bounds, pixels, _alpha);
         }
     }
@@ -339,22 +353,46 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             bounds.Right >= screen.Right && bounds.Bottom >= screen.Bottom;
     }
 
-    private void ShowMenu(nint hwnd, Point point)
+    private bool Setting(string key, bool fallback = false)
+    {
+        var settings = state.Snapshot().Settings;
+        return settings is { ValueKind: JsonValueKind.Object } json &&
+            json.TryGetProperty(key, out var value) &&
+            value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : fallback;
+    }
+
+    private void ShowMenu(nint hwnd, Point point, bool fromTray = false)
     {
         var settings = state.Snapshot().Settings;
         bool Checked(string key) => settings is { } json && json.TryGetProperty(key, out var value) && value.GetBoolean();
         var menu = CreatePopupMenu();
         try
         {
+            AppendMenuW(menu, MfGrayed, 0, "常用设置");
             AppendMenuW(menu, MfString | (Checked("lowPerformance") ? MfChecked : 0), 1, "低性能模式");
+            AppendMenuW(menu, MfString | (Checked("notch") ? MfChecked : 0), 9, "顶部刘海");
             AppendMenuW(menu, MfString | (Checked("translation") ? MfChecked : 0), 2, "显示翻译");
             AppendMenuW(menu, MfString | (Checked("karaoke") ? MfChecked : 0), 3, "逐字高亮");
             AppendMenuW(menu, MfString | (Checked("clickThrough") ? MfChecked : 0), 4, "鼠标穿透");
             AppendMenuW(menu, MfString | (Checked("autoHideOnHover") ? MfChecked : 0), 5, "悬停自动隐藏");
             AppendMenuW(menu, MfSeparator, 0, null);
+            AppendMenuW(menu, MfGrayed, 0, "显示设置");
+            AppendMenuW(menu, MfString | (Checked("enabled") ? MfChecked : 0), 7, "显示词岛");
+            AppendMenuW(menu, MfString | (Checked("experimentalMultiLine") ? MfChecked : 0), 10,
+                "实验性多行歌词");
+            AppendMenuW(menu, MfString | (Checked("hideFullscreen") ? MfChecked : 0), 11, "全屏时隐藏");
+            AppendMenuW(menu, MfString | (Checked("hidePaused") ? MfChecked : 0), 12, "暂停时隐藏");
+            AppendMenuW(menu, MfSeparator, 0, null);
+            AppendMenuW(menu, MfGrayed, 0, "快捷操作");
+            AppendMenuW(menu, MfString, 8, "解除鼠标穿透并显示");
             AppendMenuW(menu, MfString, 6, "重置位置");
+            AppendMenuW(menu, MfSeparator, 0, null);
+            AppendMenuW(menu, MfString, 13, "关于与许可");
+            AppendMenuW(menu, MfString, 14, "项目源代码（GitHub）");
+            if (fromTray) SetForegroundWindow(hwnd);
             // TPM_RETURNCMD avoids relying on focus or WM_COMMAND for a no-activate overlay.
             var id = TrackPopupMenu(menu, TpmReturnCmd | TpmRightButton, point.X, point.Y, 0, hwnd, 0);
+            if (fromTray) PostMessageW(hwnd, 0, 0, 0);
             switch (id)
             {
                 case 1: commands.SetSetting("reduced_motion", !Checked("lowPerformance")); break;
@@ -363,6 +401,17 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
                 case 4: commands.SetSetting("click_through", !Checked("clickThrough")); break;
                 case 5: commands.SetSetting("auto_hide_on_hover", !Checked("autoHideOnHover")); break;
                 case 6: commands.ResetPosition(); break;
+                case 7: commands.SetSetting("enabled", !Checked("enabled")); break;
+                case 9: commands.SetSetting("shape", Checked("notch") ? "pill" : "notch"); break;
+                case 10: commands.SetSetting("experimental_multi_line", !Checked("experimentalMultiLine")); break;
+                case 11: commands.SetSetting("hide_fullscreen", !Checked("hideFullscreen")); break;
+                case 12: commands.SetSetting("hide_paused", !Checked("hidePaused")); break;
+                case 13: commands.ShowAbout(); break;
+                case 14: commands.OpenSource(); break;
+                case 8:
+                    commands.SetSetting("click_through", false);
+                    commands.SetSetting("enabled", true);
+                    break;
             }
         }
         finally { DestroyMenu(menu); }

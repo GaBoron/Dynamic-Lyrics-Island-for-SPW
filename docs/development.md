@@ -58,7 +58,7 @@ TrackMetadata
 PlaybackTimeline
 ```
 
-Windows 和 Linux 共用核心播放模型与大部分 Swing UI，但窗口运行方式不同。
+Windows 和 Linux 共用核心播放模型。Windows 由 WinUI / Win32 原生进程显示词岛，Linux 保留独立 JVM 中的 Swing 窗口。
 
 Windows：
 
@@ -66,8 +66,12 @@ Windows：
 SPW JVM
  ├─ host/
  ├─ core/
- ├─ ui/
- └─ platform/Windows...
+ └─ WindowsIslandProcess
+        │ 控制通道与频谱管道
+        ↓
+   IslandHost.exe
+        ├─ Win32 词岛窗口
+        └─ WinUI 字体窗口（按需打开）
 ```
 
 Linux：
@@ -238,27 +242,22 @@ TrackMetadata
 
 ### 3.5 Windows UI
 
-Windows 迁移期间，`IslandRuntime` 仍创建现有 `IslandWindow` 负责日常显示，同时启动独立的 `IslandHost.exe`。原生窗口只在 `--window-preview` 模式显示，避免双窗口；它通过 Win2D / DirectWrite 对整行歌词塑形，按原生播放时钟进行歌词选择、逐字高亮与 AMLL 运动采样，再将透明画面提交到 Win32 窗口。低性能模式降低刷新频率并跳过详细逐字运动。正式切换需完成其余视觉迁移与 SPW 实际验收。
+Windows 默认由 `IslandHost.exe` 显示词岛。原生窗口通过 Win2D / DirectWrite 对歌词塑形，按播放时钟更新逐字高亮与动效，并将透明画面提交到 Win32 窗口。低性能模式降低刷新频率。字体设置通过同一程序的 WinUI 窗口打开。
 
 ```text
 PlaybackTimeline
- ├─ snapshot() → IslandWindow
  └─ 状态差量 → WindowsIslandProcess → IslandHost.exe
                                   └─ 本地播放时钟
 频谱 → 独立命名管道 → IslandHost.exe
 原生播放命令 → WindowsIslandProcess → SPW Playback API
 
-IslandWindow
- ↓
-IslandPanel
- ├─ IslandLeadingContent
- ├─ IslandLyricsPainter
- ├─ IslandTrailingContent
- ├─ IslandBackgroundProgress
- └─ PlaybackProgress / 播放按钮
+IslandHost.exe
+ ├─ OverlayWindow / NativeLyricsCanvas
+ ├─ NativeLyricsTimeline
+ └─ WinUI 字体窗口
 ```
 
-`IslandWindow` 负责窗口生命周期和整体状态，不负责具体歌词绘制。
+Linux 的 `IslandWindow` 负责窗口生命周期和整体状态，不负责具体歌词绘制。
 
 Windows 控制通道使用父子进程标准流上的逐行 JSON，带协议版本握手。歌曲、歌词、播放状态和设置只在变化时发送；播放中最多每秒校准一次位置，原生端用单调时钟推进。频谱使用单独的固定长度二进制管道，低性能模式不发送实时频谱。插件退出时关闭子进程；子进程异常退出时按间隔自动重启并重新发送完整状态。
 
@@ -377,7 +376,6 @@ Windows 和 Linux 使用不同的 `preference_config.json`，用于隐藏对应�
 
 | 文件 | 职责 |
 | --- | --- |
-| `WindowsOverlay.kt` | Windows 覆盖窗口能力：鼠标穿透、置顶强化和前台全屏判断 |
 | `SystemTheme.kt` | 读取 Windows 应用深浅色主题 |
 | `DotNetFrameworkRuntime.kt` | 在启动实时频谱 helper 前静默检查所需 .NET Framework CLR |
 | `ProcessSpectrum.kt` | 管理 Windows 进程音频频谱 helper 的生命周期、数据读取和模拟频谱降级 |
@@ -386,8 +384,6 @@ Windows 和 Linux 使用不同的 `preference_config.json`，用于隐藏对应�
 
 | 文件 | 职责 |
 | --- | --- |
-| `GlobalMenuDismisser.kt` | 弹出菜单显示期间监听菜单外点击；Windows 使用低级鼠标钩子，其他平台使用适当 fallback |
-| `X11MenuDismisser.kt` | `GlobalMenuDismisser` 的 XToolkit/X11 外部点击 fallback；当前 Linux 主菜单路径主要使用 GTK 托盘 |
 | `X11InputRegion.kt` | 根据词岛真实轮廓设置 X11 ShapeInput，使透明区域不截获鼠标 |
 
 #### Linux 启动
@@ -494,7 +490,6 @@ LyricPainter
 IslandMenuCommands
  ↓
 PopupMenuEntry
- ├─ LightweightPopupMenu
  └─ GtkTray
 ```
 
@@ -502,10 +497,9 @@ PopupMenuEntry
 
 | 文件 | 职责 |
 | --- | --- |
-| `IslandMenu.kt` | 统一管理 Windows 托盘/弹出菜单、Linux 托盘和关于窗口 |
+| `IslandMenu.kt` | 管理 Linux 托盘和关于窗口 |
 | `IslandMenuCommands.kt` | 创建共享菜单模型，并将菜单操作转换为设置或插件操作 |
 | `PopupMenuEntry.kt` | 菜单标题、说明、分隔线、开关和操作项的通用数据模型 |
-| `LightweightPopupMenu.kt` | 非 Linux 平台使用的进程内自绘弹出菜单 |
 | `GtkTray.kt` | Linux 原生 GTK 托盘及其菜单同步 |
 | `GtkPopupMenu.kt` | 一次性 GTK 原生弹出菜单封装；当前 Linux 词岛右键入口暂未使用 |
 | `AboutDialog.kt` | 项目、来源和许可证信息的自绘关于窗口 |
@@ -595,9 +589,8 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/linux/resources/preference_config.json` | Linux 配置页声明，移除平台未支持项目 |
 | `src/main/resources/META-INF/extensions.idx` | 显式注册 `IslandPlaybackExtension` |
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
-| `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
-| `native/font-picker/` | Windows WinUI 字体与字型选择器源码 |
-| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口、频谱接收端与歌词窗口预览 |
+| `src/linux/resources/fonts/` | Linux 专用 Noto Sans SC 多字重字体 |
+| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口、频谱接收端和 WinUI 字体窗口 |
 | `WindowsNativeRuntime.kt` | 检查本机 .NET Desktop 与 Windows App SDK 运行组件，供 Windows 原生界面共用 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |
@@ -741,9 +734,8 @@ HostSettings
 Windows：
 
 ```text
-IslandWindow
-IslandHoverVisibility
-WindowsOverlay
+native/island-host/OverlayWindow.cs
+native/island-host/OverlayHoverVisibility.cs
 ```
 
 Linux 输入轮廓：
@@ -846,12 +838,11 @@ IslandMenuCommands
 PopupMenuEntry
 ```
 
-Windows / 非 Linux 自绘弹窗：
+Windows 原生菜单：
 
 ```text
-LightweightPopupMenu
-GlobalMenuDismisser
-SystemTheme
+native/island-host/OverlayWindow.cs
+native/island-host/IslandTrayIcon.cs
 ```
 
 Linux：
@@ -1067,14 +1058,7 @@ UI 通过 `snapshot()` 获取稳定快照，而不是直接读取宿主对象。
 
 ### Swing EDT
 
-Windows 的：
-
-- `IslandWindow`
-- `IslandPanel`
-- Swing 菜单；
-- 关于窗口；
-
-都应在 EDT 上操作。
+Linux 的 `IslandWindow`、`IslandPanel` 和关于窗口应在 EDT 上操作。Windows 的关于窗口仍由 EDT 管理，词岛和字体窗口由原生进程管理。
 
 不要在绘制函数中执行：
 

@@ -2,7 +2,6 @@
 package io.github.gaboron.spwisland.platform
 
 import io.github.gaboron.spwisland.core.IslandSettings
-import io.github.gaboron.spwisland.core.LyricFontWeight
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.awt.Desktop
@@ -14,8 +13,12 @@ import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 /** Launches the WinUI font picker without blocking SPW's UI thread. */
+internal data class FontChoice(
+    val family: String, val weight: Int, val size: Int, val style: String, val stretch: Int
+)
+
 internal class WindowsFontPicker(
-    private val apply: (String, LyricFontWeight) -> Unit,
+    private val apply: (FontChoice) -> Unit,
     private val report: (Throwable) -> Unit
 ) : AutoCloseable {
     private val executor = Executors.newSingleThreadExecutor { task ->
@@ -36,8 +39,12 @@ internal class WindowsFontPicker(
                 val executable = executablePath()
                 val launched = ProcessBuilder(
                     executable.toString(),
+                    "--font-picker",
                     "--family", current.fontFamily,
-                    "--weight", current.fontWeight.storageName
+                    "--weight", current.fontWeight.toString(),
+                    "--size", current.fontSize.toString(),
+                    "--style", current.fontStyle,
+                    "--stretch", current.fontStretch.toString()
                 ).directory(executable.parent.toFile())
                     .redirectError(ProcessBuilder.Redirect.INHERIT)
                     .start()
@@ -49,7 +56,7 @@ internal class WindowsFontPicker(
                 if (exitCode != 0 && result == null && !closed.get()) {
                     error("Windows 运行组件启动失败，请检查安装后重试")
                 }
-                if (!closed.get() && result != null) apply(result.first, result.second)
+                if (!closed.get() && result != null) apply(result)
             } catch (error: Exception) {
                 if (!closed.get()) report(IllegalStateException("字体选择器启动失败", error))
             } finally {
@@ -81,7 +88,7 @@ internal class WindowsFontPicker(
     }
 
     private fun executablePath(): Path {
-        val resource = checkNotNull(javaClass.getResource("/native/font-picker/IslandFontPicker.exe")) {
+        val resource = checkNotNull(javaClass.getResource("/native/island-host/IslandHost.exe")) {
             "字体选择器资源缺失"
         }
         check(resource.protocol == "file") { "字体选择器没有展开为可执行文件" }
@@ -95,16 +102,19 @@ internal class WindowsFontPicker(
     }
 
     private companion object {
-        fun decode(line: String): Pair<String, LyricFontWeight>? {
-            val parts = line.split(':', limit = 3)
-            if (parts.size != 3 || parts[0] != "APPLY") return null
-            val weight = LyricFontWeight.fromStorage(parts[1])
-            val family = runCatching {
-                if (parts[2] == "-") "" else {
-                    String(Base64.getDecoder().decode(parts[2]), StandardCharsets.UTF_8).take(100).trim()
+        fun decode(line: String): FontChoice? {
+            val parts = line.split(':', limit = 6)
+            if (parts.size != 6 || parts[0] != "APPLY") return null
+            return runCatching {
+                val family = if (parts[1] == "-") "" else {
+                    String(Base64.getDecoder().decode(parts[1]), StandardCharsets.UTF_8).take(100).trim()
                 }
-            }.getOrNull() ?: return null
-            return family to weight
+                val weight = parts[2].toInt().takeIf { it in 100..900 } ?: return null
+                val size = parts[3].toInt().takeIf { it in 14..42 } ?: return null
+                val style = parts[4].takeIf { it in setOf("normal", "italic", "oblique") } ?: return null
+                val stretch = parts[5].toInt().takeIf { it in 1..9 } ?: return null
+                FontChoice(family, weight, size, style, stretch)
+            }.getOrNull()
         }
     }
 }

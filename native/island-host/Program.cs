@@ -3,6 +3,27 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using IslandHost;
+using IslandFontPicker;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using WinRT;
+
+internal static class Program
+{
+[STAThread]
+private static async Task<int> Main(string[] args)
+{
+if (args.Contains("--font-picker"))
+{
+    ComWrappersSupport.InitializeComWrappers();
+    Application.Start(_ =>
+    {
+        SynchronizationContext.SetSynchronizationContext(
+            new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
+        new App();
+    });
+    return 0;
+}
 
 var parentText = ReadArgument("--parent-pid");
 var pipeName = ReadArgument("--spectrum-pipe");
@@ -16,18 +37,15 @@ using var parent = Process.GetProcessById(parentId);
 using var cancellation = new CancellationTokenSource();
 var state = new IslandHostState();
 var commands = new HostCommandWriter(Console.Out);
-OverlayWindow? overlay = null;
-Thread? overlayThread = null;
-if (args.Contains("--window-preview"))
+var overlay = new OverlayWindow(state, commands);
+using var windowReady = new ManualResetEventSlim();
+var overlayThread = new Thread(() =>
 {
-    overlay = new OverlayWindow(state, commands);
-    overlayThread = new Thread(() =>
-    {
-        try { overlay.Run(); }
-        catch (Exception error) { Console.Error.WriteLine(error); }
-    }) { IsBackground = true, Name = "SPW Island native window" };
-    overlayThread.Start();
-}
+    try { overlay.Run(windowReady.Set); }
+    catch (Exception error) { Console.Error.WriteLine(error); Environment.Exit(3); }
+}) { IsBackground = true, Name = "SPW Island native window" };
+overlayThread.Start();
+if (!windowReady.Wait(TimeSpan.FromSeconds(5))) return 3;
 var spectrum = SpectrumChannel.Receive(pipeName, state, cancellation.Token);
 var watcher = Task.Run(async () =>
 {
@@ -56,8 +74,8 @@ catch (Exception error) when (error is JsonException or IOException)
 }
 finally
 {
-    overlay?.Stop();
-    overlayThread?.Join(1000);
+    overlay.Stop();
+    overlayThread.Join(1000);
     cancellation.Cancel();
     try { await spectrum; } catch (OperationCanceledException) { }
     catch (EndOfStreamException) { }
@@ -69,4 +87,6 @@ string? ReadArgument(string name)
 {
     var index = Array.IndexOf(args, name);
     return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+}
+}
 }

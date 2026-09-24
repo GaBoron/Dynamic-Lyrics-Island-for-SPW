@@ -3,6 +3,7 @@ package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.*
 import java.awt.Dimension
+import java.awt.Font
 import kotlin.math.ceil
 
 /** One layout specification owns text selection, insets, measured width and vertical centering. */
@@ -10,8 +11,11 @@ class IslandTextBlock(snapshot: PlaybackSnapshot, private val settings: IslandSe
                       selectedLine: LyricLine? = snapshot.line) {
     val line = selectedLine
     val main = line?.text?.takeIf { it.isNotBlank() } ?: snapshot.track?.title?.takeIf { it.isNotBlank() } ?: "SPW"
-    val mainFont = SystemUiFont.lyric(settings.fontFamily, settings.fontWeight, settings.fontSize.toFloat())
-    val mainFallbackFont = SystemUiFont.lyricFallback(settings.fontWeight, settings.fontSize.toFloat())
+    private val legacyWeight = LyricFontWeight.nearest(settings.fontWeight)
+    val mainFont = SystemUiFont.lyric(settings.fontFamily, legacyWeight, settings.fontSize.toFloat())
+        .let { if (settings.fontStyle != "normal") it.deriveFont(Font.ITALIC) else it }
+    val mainFallbackFont = SystemUiFont.lyricFallback(legacyWeight, settings.fontSize.toFloat())
+        .let { if (settings.fontStyle != "normal") it.deriveFont(Font.ITALIC) else it }
     val sub = line?.translation?.takeIf { settings.translation && it.isNotBlank() }
     val subFont = mainFont.deriveFont(settings.fontSize * .7f)
     val subFallbackFont = mainFallbackFont.deriveFont(settings.fontSize * .7f)

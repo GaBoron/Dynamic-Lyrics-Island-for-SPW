@@ -32,17 +32,16 @@ class IslandRuntime : AutoCloseable {
             }?.let(timeline::lyricsChanged)
         }
     }
-    private var window: IslandWindow? = null
     private var linuxWindow: LinuxIslandProcess? = null
     private var nativeWindow: WindowsIslandProcess? = null
+    private val aboutDialog = if (Platform.isWindows()) AboutDialog(null, ::report) else null
     private val spectrum = ProcessSpectrum(::notifySpectrumFallback)
     @Volatile private var closed = false
     private val settings = HostSettings(WorkshopApi.manager.createConfigManager()) {
         updateSpectrumMode()
-        if (!Platform.isLinux()) SwingUtilities.invokeLater { if (!closed) window?.reload() }
     }
     private val fontPicker = if (Platform.isWindows()) WindowsFontPicker(
-        { family, weight -> settings.setFont(family, weight) }, ::report
+        { choice -> settings.setFont(choice.family, choice.weight, choice.size, choice.style, choice.stretch) }, ::report
     ) else null
     private val keyboard = KeyEventDispatcher { e ->
         if (!closed && e.id == KeyEvent.KEY_RELEASED && e.keyCode == KeyEvent.VK_D &&
@@ -66,14 +65,10 @@ class IslandRuntime : AutoCloseable {
         }
         if (Platform.isLinux()) {
             linuxWindow = LinuxIslandProcess(timeline, settings, actions, ::report)
-        } else onEdt {
-            window = IslandWindow(timeline, settings, actions, ::report,
-                spectrum::levels, spectrum::usesSyntheticFallback)
-        }
-        if (Platform.isWindows()) {
+        } else if (Platform.isWindows()) {
             nativeWindow = WindowsIslandProcess(timeline, settings, actions, spectrum::levels,
-                ::notifyWindowsRuntimeMissing)
-        }
+                ::notifyWindowsRuntimeMissing, ::about, ::openSource)
+        } else error("当前系统不支持词岛")
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
     private fun updateSpectrumMode() {
@@ -87,7 +82,8 @@ class IslandRuntime : AutoCloseable {
     fun resetSettings() = safely { settings.resetAll() }
     fun about() {
         if (closed) return
-        linuxWindow?.about() ?: SwingUtilities.invokeLater { if (!closed) window?.about() }
+        if (Platform.isLinux()) linuxWindow?.about()
+        else SwingUtilities.invokeLater { if (!closed) aboutDialog?.show() }
     }
     fun chooseFont() {
         if (!closed) fontPicker?.show(settings.read())
@@ -111,11 +107,7 @@ class IslandRuntime : AutoCloseable {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyboard)
         linuxWindow?.close(); linuxWindow = null
         nativeWindow?.close(); nativeWindow = null
-        try {
-            fontPicker?.close(); currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
-        } finally { if (window != null) onEdt { window?.close(); window = null } }
-    }
-    private fun onEdt(block: () -> Unit) {
-        if (SwingUtilities.isEventDispatchThread()) block() else SwingUtilities.invokeAndWait(block)
+        fontPicker?.close(); currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
+        aboutDialog?.let { SwingUtilities.invokeLater { it.close() } }
     }
 }

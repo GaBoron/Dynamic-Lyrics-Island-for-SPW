@@ -6,7 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:IslandFontPicker"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Title="选择歌词字体"
+    Title="歌词字体与排版"
     mc:Ignorable="d">
     <Window.SystemBackdrop>
         <MicaBackdrop />
@@ -18,7 +18,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TitleBar x:Name="AppTitleBar" Title="选择歌词字体" Subtitle="灵动词岛 for SPW">
+        <TitleBar x:Name="AppTitleBar" Title="歌词字体与排版" Subtitle="灵动词岛 for SPW">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/AppIcon.png" />
             </TitleBar.IconSource>

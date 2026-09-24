@@ -27,7 +27,8 @@
 | [Jaudiotagger](https://www.jthink.net/jaudiotagger/)，Paul Taylor 与 contributors | 随包提供未修改的 3.0.1，仅读取本地音频时长与内嵌封面；独立 JAR 可替换 | LGPL-2.1-or-later；附带 [许可全文](licenses/LGPL-2.1.txt) 与 `source/jaudiotagger-3.0.1-sources.jar` |
 | [Gson](https://github.com/google/gson)，Google 与 contributors | 随包提供未修改的 2.13.2，用于 Windows IslandHost 控制通道的 JSON 编码与解析 | Apache-2.0；附带 [许可全文](licenses/Apache-2.0.txt) |
 | [Win2D](https://github.com/microsoft/Win2D)，Microsoft | 随 Windows IslandHost 提供 1.4.0，用于原生歌词排版与绘制 | MIT；附带 [许可全文](licenses/Win2D-MIT.txt) |
-| [Noto Sans SC](https://github.com/notofonts/noto-cjk/tree/Sans2.004)，Adobe / Noto Project Authors | 随包提供未修改的 Thin、Light、DemiLight、Regular、Medium、Bold、Black OTF；歌词使用所选字重，插件自绘界面使用 Regular | SIL Open Font License 1.1；附带 [许可全文](licenses/OFL-1.1-Noto-Sans-SC.txt) |
+| [MiSans 可变字体](https://hyperos.mi.com/font/zh/details/sc/)，小米 | 官方原版 MiSansVF.ttf 用于 Windows 原生歌词和字体选择器；在软件“关于与许可”中署名 | 小米 MiSans 字体知识产权许可协议；附带 [官方协议](licenses/MiSans-License.pdf) |
+| [Noto Sans SC](https://github.com/notofonts/noto-cjk/tree/Sans2.004)，Adobe / Noto Project Authors | 仅随 Linux 包提供未修改的 Thin、Light、DemiLight、Regular、Medium、Bold、Black OTF；歌词使用所选字重，自绘界面使用 Regular | SIL Open Font License 1.1；附带 [许可全文](licenses/OFL-1.1-Noto-Sans-SC.txt) |
 | [Kotlin](https://github.com/JetBrains/kotlin)，JetBrains | 编译工具和宿主标准库，不装入插件 | Apache-2.0 |
 | [PF4J](https://github.com/pf4j/pf4j)，Decebal Suiu | 编译使用 3.12.0，由宿主提供 | Apache-2.0 |
 | [Gradle](https://github.com/gradle/gradle)，Gradle contributors | Wrapper 来自 SPW API 0.1.0-dev20，构建使用 9.2.1 | Apache-2.0；Wrapper 自带声明保留，发行包不内嵌 Gradle 发行版 |

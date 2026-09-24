@@ -69,10 +69,10 @@ internal class WindowsIslandWire {
         if (trackChanged) message["track"] = snapshot.track
         if (lineChanged) message["line"] = snapshot.line
         if (lyricsChanged) message["lyrics"] = snapshot.lyrics
-        // Artwork belongs to the later visual channel; do not JSON-encode its entire pixel array.
         if (metadataChanged) message["metadata"] = mapOf(
             "durationMs" to snapshot.metadata.durationMs,
-            "coverRgb" to snapshot.metadata.coverRgb
+            "coverRgb" to snapshot.metadata.coverRgb,
+            "coverPixels" to NativeCoverFrame.encode(snapshot.metadata.cover)
         )
         if (settingsChanged) message["settings"] = current
         if (displaysChanged) message["displays"] = displays
@@ -94,15 +94,23 @@ internal class WindowsIslandWire {
         val message = JsonParser.parseString(line).asJsonObject
         when (message.get("type")?.asString) {
             "command" -> when (val action = message.get("action")?.asString) {
-                "previous", "toggle", "next" -> IslandCommand(action)
+                "previous", "toggle", "next", "about", "source" -> IslandCommand(action)
                 "seek" -> IslandCommand(action, listOf(message.get("positionMs").asLong.coerceAtLeast(0).toString()))
                 else -> null
             }
             "setting" -> {
                 val key = message.get("key")?.asString ?: return null
-                if (key !in setOf("reduced_motion", "translation", "karaoke", "click_through",
-                        "auto_hide_on_hover")) return null
-                IslandCommand("setting", listOf(key, message.get("value").asBoolean.toString()))
+                val value = message.get("value") ?: return null
+                if (key == "shape") {
+                    val shape = value.asString.takeIf { it == "pill" || it == "notch" } ?: return null
+                    IslandCommand("setting", listOf(key, shape))
+                } else {
+                    if (key !in setOf("enabled", "reduced_motion", "translation", "karaoke",
+                            "click_through", "auto_hide_on_hover", "experimental_multi_line",
+                            "hide_fullscreen", "hide_paused") || !value.isJsonPrimitive ||
+                        !value.asJsonPrimitive.isBoolean) return null
+                    IslandCommand("setting", listOf(key, value.asBoolean.toString()))
+                }
             }
             "position" -> {
                 val screen = message.get("screen")?.asString ?: return null

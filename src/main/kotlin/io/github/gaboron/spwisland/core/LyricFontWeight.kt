@@ -14,5 +14,7 @@ enum class LyricFontWeight(val storageName: String) {
     companion object {
         fun fromStorage(value: String): LyricFontWeight =
             entries.firstOrNull { it.storageName == value } ?: REGULAR
+        fun nearest(value: Int): LyricFontWeight =
+            entries.minBy { kotlin.math.abs(it.storageName.toInt() - value) }
     }
 }

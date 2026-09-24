@@ -72,7 +72,10 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
             else -> SideContent.COVER_SPECTRUM
         },
         fontFamily = config.get("font_family", "").take(100).trim(),
-        fontWeight = LyricFontWeight.fromStorage(config.get("font_weight", "400")),
+        fontWeight = number("font_weight", 400, 100, 900),
+        fontStyle = config.get("font_style", "").takeIf { it in setOf("normal", "italic", "oblique") }
+            ?: if (config.get("font_italic", false)) "italic" else "normal",
+        fontStretch = number("font_stretch", 5, 1, 9),
         fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
@@ -176,9 +179,12 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         return changed
     }
     override fun set(key: String, value: Any) = update { it.set(key, value) }
-    override fun setFont(family: String, weight: LyricFontWeight) = update {
+    override fun setFont(family: String, weight: Int, size: Int, style: String, stretch: Int) = update {
         it.set("font_family", family.take(100).trim())
-        it.set("font_weight", weight.storageName)
+        it.set("font_weight", weight.coerceIn(100, 900))
+        it.set("font_size", size.coerceIn(14, 42))
+        it.set("font_style", style.takeIf { value -> value in setOf("normal", "italic", "oblique") } ?: "normal")
+        it.set("font_stretch", stretch.coerceIn(1, 9))
     }
     override fun savePosition(screen: String, x: Int, y: Int, anchor: IslandAnchor) = update(replacesPosition = true) {
         it.set("screen", screen); it.set("position_x", x); it.set("position_y", y)
@@ -231,6 +237,8 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         val INTEGER_SETTINGS = mapOf(
             "corner_roundness" to IntegerLimits(95, 0, 100),
             "font_size" to IntegerLimits(22, 14, 42),
+            "font_weight" to IntegerLimits(400, 100, 900),
+            "font_stretch" to IntegerLimits(5, 1, 9),
             "max_width" to IntegerLimits(640, 280, 1200),
             "opacity" to IntegerLimits(96, 35, 100),
             "offset_ms" to IntegerLimits(0, -2000, 2000)

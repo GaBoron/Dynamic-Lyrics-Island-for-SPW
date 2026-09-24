@@ -18,13 +18,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 
-/** Keeps the native process alive while AWT remains the active Windows renderer. */
+/** Supervises the only Windows island renderer. */
 internal class WindowsIslandProcess(
     private val timeline: PlaybackSource,
     private val settings: SettingsStore,
     private val actions: PlaybackActions,
     private val spectrumLevels: () -> FloatArray,
-    private val runtimeNotice: (String) -> Unit
+    private val runtimeNotice: (String) -> Unit,
+    private val showAbout: () -> Unit,
+    private val openSource: () -> Unit
 ) : AutoCloseable {
     private val closed = AtomicBoolean()
     @Volatile private var process: Process? = null
@@ -43,7 +45,7 @@ internal class WindowsIslandProcess(
                     if (!runtimeNoticeSent && settings.read().enabled) {
                         runtimeNoticeSent = true
                         runCatching { runtimeNotice(
-                            "Windows 运行组件未就绪；打开字体选择器可查看安装说明。安装后将自动重试，当前词岛可继续使用。"
+                            "Windows 运行组件未就绪；打开字体设置可查看安装说明。安装后词岛将自动重试。"
                         ) }
                     }
                     Thread.sleep(30_000)
@@ -144,9 +146,13 @@ internal class WindowsIslandProcess(
         "previous" -> actions.previous()
         "toggle" -> actions.toggle()
         "next" -> actions.next()
+        "about" -> showAbout()
+        "source" -> openSource()
         "seek" -> command.arguments.singleOrNull()?.toLongOrNull()?.let(actions::seek)
         "setting" -> if (command.arguments.size == 2) {
-            settings.set(command.arguments[0], command.arguments[1].toBooleanStrict())
+            val key = command.arguments[0]
+            settings.set(key, if (key == "shape") command.arguments[1]
+                else command.arguments[1].toBooleanStrict())
         }
         "position" -> if (command.arguments.size == 6) {
             val args = command.arguments

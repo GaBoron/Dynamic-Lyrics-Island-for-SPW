@@ -2,13 +2,8 @@
 package io.github.gaboron.spwisland.ui
 
 import io.github.gaboron.spwisland.core.LyricFontWeight
-import com.sun.jna.Platform
-import com.sun.jna.platform.win32.Advapi32Util
-import com.sun.jna.platform.win32.WinReg
 import java.awt.Font
 import java.awt.GraphicsEnvironment
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -39,7 +34,6 @@ internal object SystemUiFont {
         val direct = facesFor(requested)
         if (direct.isNotEmpty()) return selectFace(direct, weight, size)
         exactFace(requested)?.let { return it.deriveFont(size) }
-        fileFace(requested, weight)?.let { return it.deriveFont(size) }
         val fallbackFaces = strippedCandidates(requested).firstNotNullOfOrNull { candidate ->
             facesFor(candidate).takeIf { it.isNotEmpty() }
         }
@@ -65,7 +59,7 @@ internal object SystemUiFont {
             .distinctBy { it.font.psName }
             .toList()
 
-    /** Progressively drops trailing style/weight words, tolerating GDI-style variants Java groups differently. */
+    /** Progressively drops trailing style and weight words when matching installed families. */
     private fun strippedCandidates(requested: String): Sequence<String> = sequence {
         var current = requested
         while (true) {
@@ -96,74 +90,6 @@ internal object SystemUiFont {
                 if (postScript !in this) put(postScript, font)
             }
         }
-    }
-
-    /** AWT's font registry hides many installed faces; load the real font file instead. */
-    private fun fileFace(requested: String, weight: LyricFontWeight): Font? {
-        val path = requestedFontFile(requested) ?: return null
-        val faces = fontsFromFile(path)
-        if (faces.isEmpty()) return null
-        faces.firstOrNull { it.matchesRequest(requested) }?.let { return it }
-        val target = weight.storageName.toInt()
-        return faces.minWithOrNull(compareBy<Font>(
-            { abs(it.inferredWeight - target) },
-            { if (target >= 500) -it.inferredWeight else it.inferredWeight }
-        ))
-    }
-
-    private fun requestedFontFile(requested: String): Path? {
-        if (!Platform.isWindows()) return null
-        return windowsFontFiles[requested]
-            ?: strippedCandidates(requested).firstNotNullOfOrNull { windowsFontFiles[it] }
-    }
-
-    private fun fontsFromFile(path: Path): List<Font> =
-        fontFiles.computeIfAbsent(path) { file ->
-            runCatching { Font.createFonts(file.toFile()).toList() }.getOrDefault(emptyList())
-        }
-
-    private fun Font.matchesRequest(requested: String): Boolean =
-        normalizeName(getFontName(Locale.ROOT)) == requested ||
-            normalizeName(getFontName(Locale.getDefault())) == requested ||
-            normalizeName(psName) == requested
-
-    private val fontFiles = ConcurrentHashMap<Path, List<Font>>()
-
-    private val windowsFontFiles: Map<String, Path> by lazy {
-        if (!Platform.isWindows()) emptyMap() else windowsRegistryFontFiles()
-    }
-
-    private fun windowsRegistryFontFiles(): Map<String, Path> = buildMap {
-        val keys = listOf(
-            WinReg.HKEY_LOCAL_MACHINE to "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts",
-            WinReg.HKEY_CURRENT_USER to "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"
-        )
-        for ((root, key) in keys) {
-            val values = runCatching { Advapi32Util.registryGetValues(root, key) }.getOrNull() ?: continue
-            values.forEach { (rawName, rawValue) ->
-                val file = rawValue as? String ?: return@forEach
-                val path = resolveFontFile(file) ?: return@forEach
-                registryFontNames(rawName).forEach { name -> putIfAbsent(normalizeName(name), path) }
-            }
-        }
-    }
-
-    private fun registryFontNames(rawName: String): List<String> =
-        rawName.replace(Regex("\\s*\\([^)]*\\)\\s*$"), "")
-            .split(" & ")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-
-    private fun resolveFontFile(file: String): Path? {
-        val direct = runCatching { Path.of(file) }.getOrNull()
-        if (direct != null && direct.isAbsolute && Files.isRegularFile(direct)) return direct
-        val candidates = listOfNotNull(
-            runCatching { Path.of(System.getenv("WINDIR") ?: "C:\\Windows", "Fonts", file) }.getOrNull(),
-            System.getenv("LOCALAPPDATA")?.let { root ->
-                runCatching { Path.of(root, "Microsoft", "Windows", "Fonts", file) }.getOrNull()
-            }
-        )
-        return candidates.firstOrNull { Files.isRegularFile(it) }
     }
 
     fun lyricFallback(weight: LyricFontWeight, size: Float): Font = bundled.getValue(weight).deriveFont(size)
@@ -220,7 +146,7 @@ internal object SystemUiFont {
 
     private val weightFamilySuffixes = weightNames.mapTo(mutableSetOf()) { it.first }
 
-    /** Trailing tokens stripped when matching GDI families that Java exposes under a base name. */
+    /** Trailing tokens stripped when matching faces under a base family name. */
     private val removableTokens = weightFamilySuffixes + "ui"
 
     private val fontResources = mapOf(
