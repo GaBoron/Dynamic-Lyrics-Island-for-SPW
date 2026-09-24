@@ -38,6 +38,8 @@
 
 ## 歌词和 SPW
 
+Windows 原生界面使用本机的 Windows 运行组件；当前字体选择器需要 .NET 10 Desktop Runtime x64 和 Windows App SDK 1.8 Runtime x64。缺少组件时会在打开字体选择器时提示，取消后不影响现有词岛和歌词。安装步骤见 [安装与更新](installation.md#windows-运行组件)。实时频谱使用的是另一套 .NET Framework 运行环境，要求见下文。
+
 词岛只显示 SPW 已经加载的歌词，不会自己联网搜索、上传歌词，也不会修改歌曲或歌词文件。需要自动获取逐字歌词时，可以搭配 [SPW-Lyrics](https://github.com/GaBoron/SPW-Lyrics)。
 
 默认单行模式主要依赖公开的歌词回调。实验性多行歌词会尝试拿到更完整的歌词时间轴，所以对宿主版本和内部行为更敏感；出问题时关掉即可回到普通模式。

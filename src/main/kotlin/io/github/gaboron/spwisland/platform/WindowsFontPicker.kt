@@ -5,11 +5,15 @@ import io.github.gaboron.spwisland.core.IslandSettings
 import io.github.gaboron.spwisland.core.LyricFontWeight
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.awt.Desktop
+import java.net.URI
 import java.util.Base64
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.swing.JOptionPane
+import javax.swing.SwingUtilities
 
-/** Launches the self-contained WinUI font picker without blocking SPW's UI thread. */
+/** Launches the WinUI font picker without blocking SPW's UI thread. */
 internal class WindowsFontPicker(
     private val apply: (String, LyricFontWeight) -> Unit,
     private val report: (Throwable) -> Unit
@@ -25,6 +29,10 @@ internal class WindowsFontPicker(
         if (closed.get() || !running.compareAndSet(false, true)) return
         executor.execute {
             try {
+                if (!WindowsNativeRuntime.isReady()) {
+                    showRuntimePrompt()
+                    return@execute
+                }
                 val executable = executablePath()
                 val launched = ProcessBuilder(
                     executable.toString(),
@@ -37,7 +45,10 @@ internal class WindowsFontPicker(
                 val result = launched.inputStream.bufferedReader(StandardCharsets.UTF_8).useLines { lines ->
                     lines.mapNotNull(::decode).firstOrNull()
                 }
-                launched.waitFor()
+                val exitCode = launched.waitFor()
+                if (exitCode != 0 && result == null && !closed.get()) {
+                    error("Windows 运行组件启动失败，请检查安装后重试")
+                }
                 if (!closed.get() && result != null) apply(result.first, result.second)
             } catch (error: Exception) {
                 if (!closed.get()) report(IllegalStateException("字体选择器启动失败", error))
@@ -45,6 +56,27 @@ internal class WindowsFontPicker(
                 process = null
                 running.set(false)
             }
+        }
+    }
+
+    private fun showRuntimePrompt() {
+        SwingUtilities.invokeLater {
+            if (closed.get()) return@invokeLater
+            val choice = JOptionPane.showOptionDialog(
+                null,
+                "Windows 运行组件尚未就绪。安装或修复后，再次打开字体选择器即可继续。",
+                "Windows 运行组件",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.WARNING_MESSAGE,
+                null,
+                arrayOf("查看安装说明", "稍后"),
+                "查看安装说明"
+            )
+            if (choice == 0) runCatching {
+                Desktop.getDesktop().browse(URI(
+                    "https://github.com/GaBoron/SPW-island/blob/main/docs/installation.md#windows-运行组件"
+                ))
+            }.onFailure(report)
         }
     }
 

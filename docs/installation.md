@@ -34,6 +34,15 @@
 
 实时频谱还有额外要求：Windows build 20348 或更高、可用的 .NET Framework 4.x，以及共享模式音频输出。条件不满足时歌词和其他功能仍可继续使用，详见 [兼容性与限制](compatibility.md#实时频谱与音频输出)。
 
+### Windows 运行组件
+
+WinUI 字体选择器使用本机安装的运行时。如果打开字体选择器时提示“Windows 运行组件尚未就绪”，请安装或修复以下两个 x64 组件：
+
+- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；
+- [Windows App SDK 1.8 Runtime](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads#latest-windows-app-sdk-runtime)。
+
+安装完成后，再次点击插件设置中的字体选择按钮即可重新检测，不需要重装插件。选择“稍后”只会取消本次字体选择，歌词和插件本体可继续使用。以后 IslandHost 也会共用这套运行组件。
+
 ## Linux
 
 Linux x64 目前仍是实验性支持，需要：

@@ -587,6 +587,7 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
 | `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
 | `native/font-picker/` | Windows WinUI 字体与字型选择器源码 |
+| `WindowsNativeRuntime.kt` | 检查本机 .NET Desktop 与 Windows App SDK 运行组件，供 Windows 原生界面共用 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |
 | `settings.gradle.kts` | Gradle 项目名称和依赖仓库 |

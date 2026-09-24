@@ -19,9 +19,7 @@ require(targetPlatform == null || targetPlatform == "windows" || targetPlatform 
 val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
 val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
-val fontPickerOutput = layout.projectDirectory.dir(
-    "native/font-picker/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64"
-)
+val fontPickerOutput = layout.buildDirectory.dir("native/font-picker")
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
@@ -98,9 +96,9 @@ tasks.register<Exec>("buildFontPicker") {
         isWindows
     }
     commandLine(
-        "dotnet", "build", project.absolutePath,
+        "dotnet", "publish", project.absolutePath,
         "-c", "Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
-        "--self-contained", "true"
+        "--self-contained", "false", "-o", fontPickerOutput.get().asFile.absolutePath
     )
 }
 
