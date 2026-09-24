@@ -19,8 +19,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private const uint MfString = 0, MfChecked = 8, MfSeparator = 0x800;
     private const uint TpmReturnCmd = 0x100, TpmRightButton = 2;
     private const uint SwpNoMove = 2, SwpNoSize = 1;
-    private const int BaseWidth = 300, BaseHeight = 58;
-    private const int BaseExpandedHeight = 100, BaseHoverMargin = 18;
+    private const int BaseWidth = 300, BaseHoverMargin = 18;
     private static readonly string ClassName = "SPW Island native overlay";
     private nint _hwnd;
     private OverlayRect _bounds;
@@ -35,16 +34,21 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
     private uint _timerDelay = 50;
     private long _nextTopmost;
     private string? _lastPosition;
-    private string? _lastTitle;
+    private NativeLyricsCanvas? _canvas;
+    private OverlayLayeredSurface? _surface;
+    private readonly NativeLyricsTimeline _lyrics = new();
+    private int _contentHeight = 58;
     private uint _dpi = 96;
     private int Width => Scale(BaseWidth);
-    private int Height => Scale(BaseHeight);
-    private int ExpandedHeight => Scale(BaseExpandedHeight);
+    private int Height => Scale(_contentHeight);
+    private int ExpandedHeight => Scale(_contentHeight + 42);
     private int HoverMargin => Scale(BaseHoverMargin);
     private int Scale(int value) => (int)Math.Round(value * _dpi / 96.0);
 
     public void Run()
     {
+        _canvas = new NativeLyricsCanvas();
+        _surface = new OverlayLayeredSurface();
         var procedure = new WindowProcedure(HandleMessage);
         var instance = GetModuleHandleW(null);
         var windowClass = new WindowClass
@@ -63,8 +67,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             0, 0, instance, 0);
         if (_hwnd == 0) throw new InvalidOperationException("无法创建词岛窗口");
         UpdateDpi(_hwnd);
-        SetLayeredWindowAttributes(_hwnd, 0, 255, LwaColorKey | LwaAlpha);
-        SetTimer(_hwnd, 1, 50, 0);
+        SetTimer(_hwnd, 1, 33, 0);
         try
         {
             while (GetMessageW(out var message, 0, 0, 0) > 0)
@@ -75,6 +78,8 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
         }
         finally
         {
+            _canvas?.Dispose();
+            _surface?.Dispose();
             KillTimer(_hwnd, 1);
             if (_hwnd != 0) DestroyWindow(_hwnd);
             GC.KeepAlive(procedure);
@@ -103,7 +108,10 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
                     relocated.Width, relocated.Height, SwpNoActivate);
                 return 0;
             case WmPaint: Paint(hwnd); return 0;
-            case WmTimer: Tick(hwnd); return 0;
+            case WmTimer:
+                try { Tick(hwnd); }
+                catch (Exception error) { Console.Error.WriteLine(error); PostMessageW(hwnd, WmClose, 0, 0); }
+                return 0;
             case WmLButtonDown:
                 if (!_clickThrough && GetCursorPos(out _press))
                 {
@@ -167,16 +175,11 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
         UpdateDpi(hwnd);
         var view = state.Snapshot();
         var settings = view.Settings;
-        var title = view.Track is { } track && track.ValueKind == JsonValueKind.Object &&
-            track.TryGetProperty("title", out var name) ? name.GetString() : null;
-        if (title != _lastTitle)
-        {
-            _lastTitle = title;
-            InvalidateRect(hwnd, 0, false);
-        }
+        var frame = _lyrics.Frame(view);
+        _contentHeight = _canvas?.ContentHeight(frame, settings) ?? 58;
         bool Flag(string name, bool fallback = false) =>
             settings is { } json && json.TryGetProperty(name, out var value) ? value.GetBoolean() : fallback;
-        var delay = Flag("lowPerformance") ? 250u : 50u;
+        var delay = Flag("lowPerformance") ? 100u : 33u;
         if (delay != _timerDelay)
         {
             KillTimer(hwnd, 1);
@@ -229,12 +232,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
             var hidden = clickThrough && Flag("autoHideOnHover") &&
                 cursor.X >= _bounds.X && cursor.X < _bounds.Right &&
                 cursor.Y >= _bounds.Y && cursor.Y < _bounds.Bottom;
-            var target = (byte)(hidden ? 0 : 255);
-            if (target != _alpha)
-            {
-                _alpha = target;
-                SetLayeredWindowAttributes(hwnd, 0, _alpha, LwaColorKey | LwaAlpha);
-            }
+            _alpha = (byte)(hidden ? 0 : 255);
         }
         if (settings is { } placement && !_dragging)
         {
@@ -249,6 +247,12 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
                 _lastPosition = signature;
                 ApplySavedPosition(hwnd, placement, view.Displays);
             }
+        }
+        if (_canvas is not null && _surface is not null)
+        {
+            var pixels = _canvas.Render(frame, settings, _bounds.Width, _bounds.Height,
+                _dpi / 96f, _hovered);
+            _surface.Present(hwnd, _bounds, pixels, _alpha);
         }
     }
 
@@ -354,33 +358,7 @@ internal sealed class OverlayWindow(IslandHostState state, HostCommandWriter com
 
     private void Paint(nint hwnd)
     {
-        var dc = BeginPaint(hwnd, out var paint);
-        var height = _bounds.Height;
-        try
-        {
-            var black = CreateSolidBrush(0);
-            var old = SelectObject(dc, black);
-            Rectangle(dc, 0, 0, Width, height);
-            SelectObject(dc, old);
-            DeleteObject(black);
-            var fill = CreateSolidBrush(0x29201c); // dark neutral, COLORREF
-            old = SelectObject(dc, fill);
-            RoundRect(dc, 0, 0, Width, height, Height, Height);
-            SelectObject(dc, old);
-            DeleteObject(fill);
-            SetBkMode(dc, 1);
-            SetTextColor(dc, 0x00ffffff);
-            var view = state.Snapshot();
-            var title = view.Track is { } track && track.ValueKind == JsonValueKind.Object &&
-                track.TryGetProperty("title", out var name) ? name.GetString() : null;
-            var area = new Rect { Left = 12, Top = 0, Right = Width - 12, Bottom = Height };
-            DrawTextW(dc, title ?? "动态歌词岛", -1, ref area, 0x25);
-            if (height > Height)
-            {
-                area = new Rect { Left = 0, Top = Height, Right = Width, Bottom = height };
-                DrawTextW(dc, "上一首             播放/暂停             下一首", -1, ref area, 0x25);
-            }
-        }
-        finally { EndPaint(hwnd, ref paint); }
+        BeginPaint(hwnd, out var paint);
+        EndPaint(hwnd, ref paint);
     }
 }

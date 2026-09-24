@@ -15,7 +15,7 @@
 
 2026-09-04 将其 `packages/core/src/lyric-player/dom/lyric-line.ts` 中的逐字抬升、长音强调曲线、持续时间缩放和末词增强移植到 `AmllMotion.kt`，改用 Kotlin 按播放时间采样，并接入 Java2D 字形绘制与单行换行动画。未嵌入 AMLL 的 DOM、WebGL 或第三方弹簧实现。
 
-该移植模块保持 **AGPL-3.0-only**，其他原有程序文件保留 **GPL-3.0-only**。依据 GPLv3 与 AGPLv3 的第 13 条组合分发，同时保留两份许可和完整对应源码；这不改变 Lyricify 原创的 CC BY-SA 4.0 许可。详见 [NOTICE](NOTICE) 中的来源、改动日期及组合说明。
+2026-09-24 又将相同运动曲线移植到 Windows 原生预览使用的 `NativeAmllMotion.cs`。两个移植模块均保持 **AGPL-3.0-only**，其他原有程序文件保留 **GPL-3.0-only**。依据 GPLv3 与 AGPLv3 的第 13 条组合分发，同时保留两份许可和完整对应源码；这不改变 Lyricify 原创的 CC BY-SA 4.0 许可。详见 [NOTICE](NOTICE) 中的来源、改动日期及组合说明。
 
 ## 依赖与构建工具
 
@@ -26,6 +26,7 @@
 | [JNA / JNA Platform](https://github.com/java-native-access/jna/tree/5.17.0)，JNA contributors | 随包提供 5.17.0；Windows 鼠标穿透与全屏判断 | JNA 双许可中选择 Apache-2.0；保留 [JNA LICENSE](licenses/JNA-LICENSE.txt)、[第三方声明](licenses/JNA-THIRD-PARTY.txt)、[libffi 许可](licenses/JNA-libffi-LICENSE.txt) 与 JAR 内原始许可 |
 | [Jaudiotagger](https://www.jthink.net/jaudiotagger/)，Paul Taylor 与 contributors | 随包提供未修改的 3.0.1，仅读取本地音频时长与内嵌封面；独立 JAR 可替换 | LGPL-2.1-or-later；附带 [许可全文](licenses/LGPL-2.1.txt) 与 `source/jaudiotagger-3.0.1-sources.jar` |
 | [Gson](https://github.com/google/gson)，Google 与 contributors | 随包提供未修改的 2.13.2，用于 Windows IslandHost 控制通道的 JSON 编码与解析 | Apache-2.0；附带 [许可全文](licenses/Apache-2.0.txt) |
+| [Win2D](https://github.com/microsoft/Win2D)，Microsoft | 随 Windows IslandHost 提供 1.4.0，用于原生歌词排版与绘制 | MIT；附带 [许可全文](licenses/Win2D-MIT.txt) |
 | [Noto Sans SC](https://github.com/notofonts/noto-cjk/tree/Sans2.004)，Adobe / Noto Project Authors | 随包提供未修改的 Thin、Light、DemiLight、Regular、Medium、Bold、Black OTF；歌词使用所选字重，插件自绘界面使用 Regular | SIL Open Font License 1.1；附带 [许可全文](licenses/OFL-1.1-Noto-Sans-SC.txt) |
 | [Kotlin](https://github.com/JetBrains/kotlin)，JetBrains | 编译工具和宿主标准库，不装入插件 | Apache-2.0 |
 | [PF4J](https://github.com/pf4j/pf4j)，Decebal Suiu | 编译使用 3.12.0，由宿主提供 | Apache-2.0 |

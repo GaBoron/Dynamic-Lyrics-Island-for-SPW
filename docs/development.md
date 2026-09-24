@@ -238,7 +238,7 @@ TrackMetadata
 
 ### 3.5 Windows UI
 
-Windows 迁移期间，`IslandRuntime` 仍创建现有 `IslandWindow` 负责显示，同时启动独立的 `IslandHost.exe` 验证原生进程边界。此阶段 IslandHost 尚不绘制词岛；后续窗口和渲染迁移会接在现有通信通道上。
+Windows 迁移期间，`IslandRuntime` 仍创建现有 `IslandWindow` 负责日常显示，同时启动独立的 `IslandHost.exe`。原生窗口只在 `--window-preview` 模式显示，避免双窗口；它通过 Win2D / DirectWrite 对整行歌词塑形，按原生播放时钟进行歌词选择、逐字高亮与 AMLL 运动采样，再将透明画面提交到 Win32 窗口。低性能模式降低刷新频率并跳过详细逐字运动。正式切换需完成其余视觉迁移与 SPW 实际验收。
 
 ```text
 PlaybackTimeline
@@ -597,7 +597,7 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
 | `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
 | `native/font-picker/` | Windows WinUI 字体与字型选择器源码 |
-| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口和频谱接收端 |
+| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口、频谱接收端与歌词窗口预览 |
 | `WindowsNativeRuntime.kt` | 检查本机 .NET Desktop 与 Windows App SDK 运行组件，供 Windows 原生界面共用 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |

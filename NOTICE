@@ -44,7 +44,9 @@ Modified 2026-09-04 by GaBoron: ported float and per-character emphasis curves,
 duration scaling and terminal-word emphasis to Kotlin AmllMotion.kt. Java2D
 glyph rendering, gradient highlighting and the damped line spring integrate the
 port into a single-line SPW island; no AMLL DOM, WebGL or spring library is bundled.
-AmllMotion.kt remains AGPL-3.0-only. Other original program files retain their
+Modified 2026-09-24 by GaBoron: ported the same curves to C# NativeAmllMotion.cs
+for the Windows native lyric preview. Both motion modules remain AGPL-3.0-only.
+Other original program files retain their
 GPL-3.0-only notices. The combined program is conveyed under the linking and
 combination permissions in section 13 of GPLv3 and AGPLv3; both licenses and
 the complete corresponding source accompany every plugin distribution.
