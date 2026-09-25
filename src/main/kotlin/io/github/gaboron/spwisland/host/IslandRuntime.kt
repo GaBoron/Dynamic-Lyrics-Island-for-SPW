@@ -8,10 +8,9 @@ import io.github.gaboron.spwisland.core.SpectrumMode
 import io.github.gaboron.spwisland.core.performance
 import io.github.gaboron.spwisland.ui.*
 import io.github.gaboron.spwisland.platform.ProcessSpectrum
-import io.github.gaboron.spwisland.platform.WindowsFontPicker
+import io.github.gaboron.spwisland.ui.ComposeFontPickerWindow
 import com.sun.jna.Platform
 import io.github.gaboron.spwisland.remote.LinuxIslandProcess
-import io.github.gaboron.spwisland.remote.WindowsIslandProcess
 import java.awt.KeyEventDispatcher
 import java.awt.KeyboardFocusManager
 import java.awt.event.KeyEvent
@@ -34,16 +33,17 @@ class IslandRuntime : AutoCloseable {
     }
     private var window: IslandWindow? = null
     private var linuxWindow: LinuxIslandProcess? = null
-    private var nativeWindow: WindowsIslandProcess? = null
     private val spectrum = ProcessSpectrum(::notifySpectrumFallback)
     @Volatile private var closed = false
     private val settings = HostSettings(WorkshopApi.manager.createConfigManager()) {
         updateSpectrumMode()
         if (!Platform.isLinux()) SwingUtilities.invokeLater { if (!closed) window?.reload() }
     }
-    private val fontPicker = if (Platform.isWindows()) WindowsFontPicker(
-        { family, weight -> settings.setFont(family, weight) }, ::report
-    ) else null
+    private val fontPicker = if (Platform.isWindows()) ComposeFontPickerWindow({ selection ->
+        safely {
+            settings.setFont(selection.family, selection.weight)
+        }
+    }, ::report) else null
     private val keyboard = KeyEventDispatcher { e ->
         if (!closed && e.id == KeyEvent.KEY_RELEASED && e.keyCode == KeyEvent.VK_D &&
             e.isControlDown && e.isShiftDown && !e.isAltDown && !e.isMetaDown) {
@@ -69,10 +69,6 @@ class IslandRuntime : AutoCloseable {
         } else onEdt {
             window = IslandWindow(timeline, settings, actions, ::report,
                 spectrum::levels, spectrum::usesSyntheticFallback)
-        }
-        if (Platform.isWindows()) {
-            nativeWindow = WindowsIslandProcess(timeline, settings, actions, spectrum::levels,
-                ::notifyWindowsRuntimeMissing)
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyboard)
     }
@@ -102,15 +98,11 @@ class IslandRuntime : AutoCloseable {
     private fun notifySpectrumFallback(message: String) {
         runCatching { WorkshopApi.ui.toast(message, WorkshopApi.Ui.ToastType.Warning) }
     }
-    private fun notifyWindowsRuntimeMissing(message: String) {
-        runCatching { WorkshopApi.ui.toast(message, WorkshopApi.Ui.ToastType.Warning) }
-    }
     override fun close() {
         if (closed) return
         closed = true
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyboard)
         linuxWindow?.close(); linuxWindow = null
-        nativeWindow?.close(); nativeWindow = null
         try {
             fontPicker?.close(); currentTrackRecovery.close(); metadata.close(); settings.close(); spectrum.close()
         } finally { if (window != null) onEdt { window?.close(); window = null } }

@@ -100,7 +100,7 @@ Linux 将界面放进独立 JVM，主要是为了隔离宿主的 Skiko/AWT 状�
 | `host/` | SPW / PF4J 生命周期、宿主回调、配置保存和宿主兼容 |
 | `ui/` | 窗口、布局、歌词绘制、动画、菜单和交互 |
 | `platform/` | Windows、X11、本地文件、系统主题、音频辅助进程等平台能力 |
-| `remote/` | Windows / Linux 宿主与独立进程之间的通信 |
+| `remote/` | Linux 宿主与独立界面进程之间的通信 |
 
 依赖方向应尽量保持：
 
@@ -238,16 +238,11 @@ TrackMetadata
 
 ### 3.5 Windows UI
 
-Windows 由 `IslandRuntime` 创建 `IslandWindow`，使用 Java2D 绘制词岛与歌词动画。独立的 `IslandHost.exe` 接收状态与频谱；其原生歌词窗口仅在显式传入 `--window-preview` 时显示。WinUI 字体选择器由插件设置按需启动。
+Windows 由 `IslandRuntime` 创建 `IslandWindow`，使用 Java2D 绘制词岛与歌词动画。Compose 字体窗口由插件设置按需打开。
 
 ```text
 PlaybackTimeline
- ├─ snapshot() → IslandWindow
- └─ 状态差量 → WindowsIslandProcess → IslandHost.exe
-                                  └─ 本地播放时钟
-频谱 → 独立命名管道 → IslandHost.exe
-原生播放命令 → WindowsIslandProcess → SPW Playback API
-
+ ↓ snapshot()
 IslandWindow
  ↓
 IslandPanel
@@ -260,7 +255,7 @@ IslandPanel
 
 `IslandWindow` 负责窗口生命周期和整体状态，不负责具体歌词绘制。
 
-Windows 控制通道使用父子进程标准流上的逐行 JSON，带协议版本握手。歌曲、歌词、播放状态和设置只在变化时发送；播放中最多每秒校准一次位置，原生端用单调时钟推进。频谱使用单独的固定长度二进制管道，低性能模式不发送实时频谱。插件退出时关闭子进程；子进程异常退出时按间隔自动重启并重新发送完整状态。
+实时频谱由 `ProcessSpectrum` 读取 Windows 音频 helper 的四频段结果，并交给词岛两侧内容绘制。低性能模式使用模拟频谱。
 
 ### 3.6 Linux UI
 
@@ -405,11 +400,8 @@ Windows 和 Linux 使用不同的 `preference_config.json`，用于隐藏对应�
 | `IslandWire.kt` | 定义宿主与子 JVM 之间的 `IslandState`、`IslandCommand`，以及子进程使用的 `RemotePlayback` |
 | `LinuxIslandProcess.kt` | 宿主侧独立界面进程管理；发送播放状态和设置，接收播放/seek/设置等命令 |
 | `LinuxIslandMain.kt` | Linux 子 JVM 入口；接收状态、创建 `IslandWindow` 并把用户操作传回宿主 |
-| `WindowsIslandWire.kt` | Windows 逐行 JSON 协议；编码状态差量并解析原生播放命令 |
-| `WindowsIslandProcess.kt` | 启动、监测和重启 IslandHost；连接 SPW 播放操作 |
-| `WindowsSpectrumPipe.kt` | 向 IslandHost 发送独立的四通道二进制频谱帧 |
 
-控制通道使用父子进程匿名管道，不提供网络接口。Windows 频谱另走随机命名的本机管道。
+控制通道使用父子进程匿名管道，不提供网络接口。
 
 ### 4.5 `ui/`：窗口与几何
 
@@ -468,8 +460,12 @@ LyricPainter
 | `WordGeometry.kt` | 在有界后台线程中准备单词和 grapheme 的字形几何，避免动画线程做昂贵轮廓运算 |
 | `TimedKaraokeBoundary.kt` | 低性能模式下只计算当前逐字单元的高亮边界 |
 | `LyricGlow.kt` | 当前歌词强调和已唱歌词的辉光绘制 |
-| `SystemUiFont.kt` | 加载 Windows 内置 MiSans、Linux 内置 Noto Sans SC、自定义歌词字体及缺字回退 |
-| `WindowsFontPicker.kt` | 启动 WinUI 字体选择器、解析选择结果并回写字体设置 |
+| `SystemUiFont.kt` | 加载两平台共用的内置 MiSans、自定义歌词字体及缺字回退 |
+| `ComposeFontPickerWindow.kt` | 打开 Compose 字体窗口并回写选择结果 |
+| `FontPickerCatalog.kt` | 读取 Windows 已安装字体和可用字形，并提供搜索分类 |
+| `FontPickerContent.kt` | 字体窗口的搜索、字形选择与操作界面 |
+| `FontPickerPreviewPanel.kt` | 使用词岛实际绘制逻辑预览歌词 |
+| `FontPickerSelection.kt` | 字体窗口提交的字体与字重选择 |
 | `IslandContentLayout.kt` | 统一歌词、左侧内容、右侧状态和展开信息的水平内缩与最小尺寸 |
 
 文本的测量和实际绘制应使用同一套塑形结果，避免窗口尺寸与最终字形不一致。
@@ -507,7 +503,6 @@ PopupMenuEntry
 | `PopupMenuEntry.kt` | 菜单标题、说明、分隔线、开关和操作项的通用数据模型 |
 | `LightweightPopupMenu.kt` | 非 Linux 平台使用的进程内自绘弹出菜单 |
 | `GtkTray.kt` | Linux 原生 GTK 托盘及其菜单同步 |
-| `GtkPopupMenu.kt` | 一次性 GTK 原生弹出菜单封装；当前 Linux 词岛右键入口暂未使用 |
 | `AboutDialog.kt` | 项目、来源和许可证信息的自绘关于窗口 |
 | `ApplicationIdentity.kt` | 窗口/托盘共享的应用名称和图标，以及 Linux 托盘临时图标导出 |
 | `ProjectLinks.kt` | 从构建资源读取项目地址并调用系统浏览器打开 |
@@ -559,7 +554,7 @@ IslandLeadingContent / IslandTrailingContent
 
 它只使用 Python 标准库，通过 `ctypes` 调用系统共享库。
 
-具有三种运行模式：
+具有两种运行模式：
 
 #### `jvm`
 
@@ -573,18 +568,6 @@ IslandLeadingContent / IslandTrailingContent
 
 菜单数据来自 `GtkTray`。
 
-#### `menu`
-
-创建一次性的 GTK 原生弹出菜单，由 GTK 自己处理：
-
-- 系统主题；
-- 勾选状态；
-- 键盘操作；
-- pointer grab；
-- 点击菜单外关闭。
-
-当前 Linux 主菜单入口使用持久托盘，该模式保留供需要原生弹出菜单的场景使用。
-
 GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工具包冲突。
 
 ### 4.11 资源与构建入口
@@ -595,11 +578,7 @@ GTK 与 Swing/AWT 不在同一个 JVM 中初始化，以减少线程和桌面工
 | `src/linux/resources/preference_config.json` | Linux 配置页声明，移除平台未支持项目 |
 | `src/main/resources/META-INF/extensions.idx` | 显式注册 `IslandPlaybackExtension` |
 | `src/main/resources/project.properties` | 构建时写入项目源代码地址 |
-| `src/main/resources/fonts/` | 内置 Noto Sans SC 多字重字体 |
-| `native/shared-fonts/MiSansVF.ttf` | Windows 内置 MiSans 可变字体，构建时加入词岛与字体选择器 |
-| `native/font-picker/` | Windows WinUI 字体与字型选择器源码 |
-| `native/island-host/` | Windows 原生词岛进程、状态时钟、命令出口、频谱接收端与歌词窗口预览 |
-| `WindowsNativeRuntime.kt` | 检查本机 .NET Desktop 与 Windows App SDK 运行组件，供 Windows 原生界面共用 |
+| `native/shared-fonts/MiSansVF.ttf` | 两平台共用的 MiSans，可在构建时加入歌词、菜单和字体窗口资源 |
 | `gradle.properties` | 项目版本与项目地址的统一来源 |
 | `build.gradle.kts` | 依赖、平台资源、频谱 helper、插件包和源码包构建 |
 | `settings.gradle.kts` | Gradle 项目名称和依赖仓库 |
@@ -1311,6 +1290,7 @@ SPW 提供：
 - JNA；
 - JNA Platform；
 - Jaudiotagger；
+- Windows 字体窗口使用的 Compose 运行库；
 - 插件资源；
 - 平台需要的 native/helper 文件。
 
@@ -1416,7 +1396,6 @@ Bug 报告、功能建议、兼容性反馈、设计想法和代码贡献都欢�
 - Apple Music-like Lyrics（AMLL）歌词动画；
 - JNA；
 - Jaudiotagger；
-- Noto Sans SC。
 - MiSans。
 
 第三方来源和许可要求以：

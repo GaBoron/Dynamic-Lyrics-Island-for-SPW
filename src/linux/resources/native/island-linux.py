@@ -69,79 +69,6 @@ def launch_jvm(home, classpath, main_class, application_name="Dynamic Lyrics Isl
         raise RuntimeError("UI main failed")
 
 
-def native_menu(x, y):
-    # A separate GTK process avoids mixing the host's GTK/AWT/Skiko thread ownership.
-    gtk = C.CDLL("libgtk-3.so.0")
-    obj = C.CDLL("libgobject-2.0.so.0")
-    glib = C.CDLL("libglib-2.0.so.0")
-    if not bind(gtk, "gtk_init_check", I, P, P)(None, None):
-        raise RuntimeError("GTK cannot connect to the desktop")
-    menu = bind(gtk, "gtk_menu_new", P)()
-    item = bind(gtk, "gtk_menu_item_new_with_label", P, S)
-    check_item = bind(gtk, "gtk_check_menu_item_new_with_label", P, S)
-    set_checked = bind(gtk, "gtk_check_menu_item_set_active", None, P, I)
-    append = bind(gtk, "gtk_menu_shell_append", None, P, P)
-    sensitive = bind(gtk, "gtk_widget_set_sensitive", None, P, I)
-    connect = bind(obj, "g_signal_connect_data", C.c_ulong, P, S, P, P, P, I)
-    quit_loop = bind(gtk, "gtk_main_quit", None)
-    callbacks = []
-    callback_type = C.CFUNCTYPE(None, P, P)
-
-    def selected(command):
-        def run(widget, data):
-            print(command, flush=True)
-        return run
-
-    # Labels are data, not markup; tab/newline characters are sanitized by the caller.
-    for line in sys.stdin:
-        kind, command, checked, label = line.rstrip("\n").split("\t", 3)
-        if kind == "SEPARATOR":
-            widget = bind(gtk, "gtk_separator_menu_item_new", P)()
-        elif kind == "TOGGLE":
-            widget = check_item(label.encode("utf-8"))
-            set_checked(widget, int(checked))
-        else:
-            widget = item(label.encode("utf-8"))
-        if kind in ("TITLE", "NOTE"):
-            sensitive(widget, 0)
-        elif kind != "SEPARATOR":
-            cb = callback_type(selected(command))
-            callbacks.append(cb)
-            connect(widget, b"activate", cb, None, None, 0)
-        append(menu, widget)
-
-    done = callback_type(lambda widget, data: quit_loop())
-    callbacks.append(done)
-    connect(menu, b"selection-done", done, None, None, 0)
-    connect(menu, b"deactivate", done, None, None, 0)
-    position_type = C.CFUNCTYPE(None, P, C.POINTER(I), C.POINTER(I), C.POINTER(I), P)
-
-    def position(widget, px, py, push_in, data):
-        px[0], py[0], push_in[0] = x, y, 1
-
-    pos = position_type(position)
-    callbacks.append(pos)
-    parent = os.getppid()
-    timer_type = C.CFUNCTYPE(I, P)
-
-    def alive(data):
-        if os.getppid() != parent:
-            quit_loop()
-            return 0
-        return 1
-
-    timer = timer_type(alive)
-    callbacks.append(timer)
-    bind(glib, "g_timeout_add", C.c_uint, C.c_uint, P, P)(500, timer, None)
-    bind(gtk, "gtk_widget_show_all", None, P)(menu)
-    # GTK 3's compatibility API is intentional: this popup originates outside GTK and has
-    # no GdkEvent or GTK parent widget. GTK owns the pointer/keyboard grab and dismissal.
-    bind(gtk, "gtk_menu_popup", None, P, P, P, P, P, C.c_uint, C.c_uint)(
-        menu, None, None, pos, None, 0, 0)
-    bind(gtk, "gtk_main", None)()
-    bind(gtk, "gtk_widget_destroy", None, P)(menu)
-
-
 def native_tray(name, icon_path):
     """Persistent system tray; the GTK main loop alone owns widgets and native callbacks."""
     import queue
@@ -304,7 +231,5 @@ if __name__ == "__main__":
         sys.exit(1 if failures else 0)
     elif sys.argv[1] == "tray":
         native_tray(sys.argv[2], sys.argv[3])
-    elif sys.argv[1] == "menu":
-        native_menu(int(sys.argv[2]), int(sys.argv[3]))
     else:
         raise SystemExit("Unknown helper mode")

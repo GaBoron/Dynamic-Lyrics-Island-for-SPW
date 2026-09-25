@@ -75,7 +75,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
         fontWeight = LyricFontWeight.fromStorage(
             config.get<Any>("font_weight", "400").toString().toDoubleOrNull()?.toInt()?.toString() ?: "400"
         ),
-        fontSize = number("font_size", 22, 14, 42), maxWidth = number("max_width", 640, 280, 1200),
+        fontSize = number("font_size", 22, 12, 72), maxWidth = number("max_width", 640, 280, 1200),
         opacity = number("opacity", 96, 35, 100), offsetMs = number("offset_ms", 0, -2000, 2000),
         screen = config.get("screen", ""),
         positionX = optionalNumber("position_x"),
@@ -232,7 +232,7 @@ class HostSettings(private val manager: ConfigManager, private val changed: () -
     private companion object {
         val INTEGER_SETTINGS = mapOf(
             "corner_roundness" to IntegerLimits(95, 0, 100),
-            "font_size" to IntegerLimits(22, 14, 42),
+            "font_size" to IntegerLimits(22, 12, 72),
             "max_width" to IntegerLimits(640, 280, 1200),
             "opacity" to IntegerLimits(96, 35, 100),
             "offset_ms" to IntegerLimits(0, -2000, 2000)

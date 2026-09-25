@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.awt.font.TextAttribute
 import kotlin.math.abs
 
-/** Creates bundled UI and lyric fonts, with optional lyric-only custom fonts. */
+/** Creates the shared MiSans UI/lyric font, with optional lyric-only custom fonts. */
 internal object SystemUiFont {
     private data class InstalledFace(val font: Font, val weight: Int)
 
@@ -22,19 +22,7 @@ internal object SystemUiFont {
         GraphicsEnvironment.getLocalGraphicsEnvironment().allFonts.toList()
     }
     private val installedFamilies = ConcurrentHashMap<String, List<InstalledFace>>()
-    private val bundled by lazy {
-        LyricFontWeight.entries.associateWith { weight ->
-            val resource = fontResources.getValue(weight)
-            val stream = checkNotNull(SystemUiFont::class.java.getResourceAsStream(resource)) {
-                "内置字体资源缺失：$resource"
-            }
-            stream.use { Font.createFont(Font.TRUETYPE_FONT, it) }
-        }
-    }
-
-    fun derive(style: Int, size: Float): Font =
-        (if (Platform.isWindows()) windowsMiSans else bundled.getValue(LyricFontWeight.REGULAR))
-            .deriveFont(style, size)
+    fun derive(style: Int, size: Float): Font = bundledMiSans.deriveFont(style, size)
 
     fun lyric(family: String, weight: LyricFontWeight, size: Float): Font {
         val requested = normalizeName(family)
@@ -169,7 +157,7 @@ internal object SystemUiFont {
         return candidates.firstOrNull { Files.isRegularFile(it) }
     }
 
-    private val windowsMiSans by lazy {
+    private val bundledMiSans by lazy {
         val resource = "/fonts/MiSansVF.ttf"
         val stream = checkNotNull(SystemUiFont::class.java.getResourceAsStream(resource)) {
             "内置字体资源缺失：$resource"
@@ -178,17 +166,22 @@ internal object SystemUiFont {
     }
 
     fun lyricFallback(weight: LyricFontWeight, size: Float): Font {
-        if (!Platform.isWindows()) return bundled.getValue(weight).deriveFont(size)
-        val awtWeight = when (weight) {
-            LyricFontWeight.THIN -> TextAttribute.WEIGHT_EXTRA_LIGHT
-            LyricFontWeight.LIGHT -> TextAttribute.WEIGHT_LIGHT
-            LyricFontWeight.DEMI_LIGHT -> TextAttribute.WEIGHT_DEMILIGHT
-            LyricFontWeight.REGULAR -> TextAttribute.WEIGHT_REGULAR
-            LyricFontWeight.MEDIUM -> TextAttribute.WEIGHT_MEDIUM
-            LyricFontWeight.BOLD -> TextAttribute.WEIGHT_BOLD
-            LyricFontWeight.BLACK -> TextAttribute.WEIGHT_HEAVY
-        }
-        return windowsMiSans.deriveFont(mapOf(TextAttribute.WEIGHT to awtWeight,
+        val anchors = listOf(
+            100 to TextAttribute.WEIGHT_EXTRA_LIGHT,
+            300 to TextAttribute.WEIGHT_LIGHT,
+            350 to TextAttribute.WEIGHT_DEMILIGHT,
+            400 to TextAttribute.WEIGHT_REGULAR,
+            500 to TextAttribute.WEIGHT_MEDIUM,
+            700 to TextAttribute.WEIGHT_BOLD,
+            900 to TextAttribute.WEIGHT_HEAVY
+        )
+        val upper = anchors.indexOfFirst { it.first >= weight.value }.coerceAtLeast(0)
+        val high = anchors[upper]
+        val low = anchors[(upper - 1).coerceAtLeast(0)]
+        val fraction = if (high.first == low.first) 0f else
+            (weight.value - low.first).toFloat() / (high.first - low.first)
+        val awtWeight = low.second + (high.second - low.second) * fraction
+        return bundledMiSans.deriveFont(mapOf(TextAttribute.WEIGHT to awtWeight,
             TextAttribute.SIZE to size))
     }
 
@@ -247,13 +240,4 @@ internal object SystemUiFont {
     /** Trailing tokens stripped when matching GDI families that Java exposes under a base name. */
     private val removableTokens = weightFamilySuffixes + "ui"
 
-    private val fontResources = mapOf(
-        LyricFontWeight.THIN to "/fonts/NotoSansSC-Thin.otf",
-        LyricFontWeight.LIGHT to "/fonts/NotoSansSC-Light.otf",
-        LyricFontWeight.DEMI_LIGHT to "/fonts/NotoSansSC-DemiLight.otf",
-        LyricFontWeight.REGULAR to "/fonts/NotoSansSC-Regular.otf",
-        LyricFontWeight.MEDIUM to "/fonts/NotoSansSC-Medium.otf",
-        LyricFontWeight.BOLD to "/fonts/NotoSansSC-Bold.otf",
-        LyricFontWeight.BLACK to "/fonts/NotoSansSC-Black.otf"
-    )
 }

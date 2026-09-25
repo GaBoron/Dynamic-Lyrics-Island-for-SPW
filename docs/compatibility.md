@@ -38,7 +38,7 @@
 
 ## 歌词和 SPW
 
-Windows 原生界面使用本机的 Windows 运行组件；当前字体选择器需要 .NET 10 Desktop Runtime x64 和 Windows App SDK 1.8 Runtime x64。缺少组件时会在打开字体选择器时提示，取消后不影响现有词岛和歌词。安装步骤见 [安装与更新](installation.md#windows-运行组件)。实时频谱使用的是另一套 .NET Framework 运行环境，要求见下文。
+Windows 实时频谱需要本机的 .NET Framework 4.x，其他运行条件见下文。字体选择器使用插件内置的 Compose 界面。
 
 词岛只显示 SPW 已经加载的歌词，不会自己联网搜索、上传歌词，也不会修改歌曲或歌词文件。需要自动获取逐字歌词时，可以搭配 [SPW-Lyrics](https://github.com/GaBoron/SPW-Lyrics)。
 
@@ -86,7 +86,7 @@ Windows 的实时频谱只捕获 SPW 进程及其子进程的音频，不会读�
 
 Windows 的“全屏时隐藏”依赖前台窗口判断。动态壁纸、桌面增强软件或其他铺满屏幕的窗口偶尔也会被识别为全屏。
 
-Windows 内置 MiSans，Linux 内置 Noto Sans SC。歌词缺字时先尝试对应平台的内置字体，再回退到系统字体；系统仍无对应字形时才会显示缺字框。
+Windows 和 Linux 均内置 MiSans。歌词缺字时先尝试 MiSans，再回退到系统字体；系统仍无对应字形时才会显示缺字框。
 
 ## Linux 实验性支持
 

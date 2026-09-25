@@ -4,6 +4,8 @@ import org.gradle.internal.os.OperatingSystem
 
 plugins {
     kotlin("jvm") version "2.3.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
+    id("org.jetbrains.compose") version "1.12.0"
     `java-library`
 }
 group = "io.github.gaboron"
@@ -19,8 +21,6 @@ require(targetPlatform == null || targetPlatform == "windows" || targetPlatform 
 val isWindows = targetPlatform?.let { it == "windows" } ?: currentOs.isWindows
 val isLinux = targetPlatform?.let { it == "linux" } ?: currentOs.isLinux
 val metadataSources by configurations.creating { isTransitive = false }
-val fontPickerOutput = layout.buildDirectory.dir("native/font-picker")
-val islandHostOutput = layout.buildDirectory.dir("native/island-host")
 dependencies {
     compileOnly(kotlin("stdlib"))
     compileOnly(workshop) { isTransitive = false }
@@ -28,21 +28,19 @@ dependencies {
     implementation("net.java.dev.jna:jna:5.17.0")
     implementation("net.java.dev.jna:jna-platform:5.17.0")
     implementation("net.jthink:jaudiotagger:3.0.1")
-    implementation("com.google.code.gson:gson:2.13.2")
+    implementation(compose.desktop.currentOs)
     metadataSources("net.jthink:jaudiotagger:3.0.1:sources")
 }
 tasks.processResources {
+    from("native/shared-fonts/MiSansVF.ttf") { into("fonts") }
     if (isWindows) {
-        dependsOn("buildSpectrum", "buildFontPicker", "buildIslandHost")
-        from("native/shared-fonts/MiSansVF.ttf") { into("fonts") }
+        dependsOn("buildSpectrum")
         from(layout.buildDirectory.file("native/spw-spectrum.exe")) { into("native") }
-        from(fontPickerOutput) {
-            into("native/font-picker")
-            exclude("*.pdb", "*.xml", "*.lib", "*.exp")
-        }
-        from(islandHostOutput) {
-            into("native/island-host")
-            exclude("*.pdb", "*.xml")
+        from({ zipTree(configurations.runtimeClasspath.get().single {
+            it.name.startsWith("skiko-awt-runtime-windows-x64-")
+        }) }) {
+            into("native/compose")
+            include("skiko-windows-x64.dll", "icudtl.dat")
         }
     } else if (isLinux) {
         exclude { it.file == file("src/main/resources/preference_config.json") }
@@ -93,37 +91,16 @@ tasks.register<Exec>("buildSpectrum") {
         file("native/ProcessLoopback.cs").absolutePath, file("native/SpectrumLevels.cs").absolutePath)
 }
 
-tasks.register<Exec>("buildFontPicker") {
-    val project = file("native/font-picker/IslandFontPicker.csproj")
-    inputs.files(fileTree("native/font-picker") { exclude("bin/**", "obj/**") })
-    inputs.files(fileTree("src/main/resources/fonts"))
-    inputs.file("native/shared-fonts/MiSansVF.ttf")
-    outputs.dir(fontPickerOutput)
-    onlyIf {
-        if (!isWindows) logger.lifecycle("Skipping the WinUI font picker on ${currentOs.name}")
-        isWindows
-    }
-    commandLine(
-        "dotnet", "publish", project.absolutePath,
-        "-c", "Release", "-p:Platform=x64", "-p:RuntimeIdentifier=win-x64",
-        "--self-contained", "false", "-o", fontPickerOutput.get().asFile.absolutePath
-    )
-}
-
-tasks.register<Exec>("buildIslandHost") {
-    val project = file("native/island-host/IslandHost.csproj")
-    inputs.files(fileTree("native/island-host") { exclude("bin/**", "obj/**") })
-    outputs.dir(islandHostOutput)
-    onlyIf {
-        if (!isWindows) logger.lifecycle("Skipping IslandHost on ${currentOs.name}")
-        isWindows
-    }
-    commandLine("dotnet", "publish", project.absolutePath,
-        "-c", "Release", "-p:RuntimeIdentifier=win-x64",
-        "--self-contained", "false", "-o", islandHostOutput.get().asFile.absolutePath)
-}
-
 fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) = tasks.register<Zip>(taskName) {
+    val libraryNames by lazy {
+        val artifacts = configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts
+        val duplicates = artifacts.groupBy { it.file.name }.filterValues { it.size > 1 }.keys
+        artifacts.associate { artifact ->
+            artifact.file.canonicalPath to if (artifact.file.name in duplicates) {
+                "${artifact.moduleVersion.id.group}-${artifact.file.name}"
+            } else artifact.file.name
+        }
+    }
     dependsOn(tasks.jar, "sourceArchive")
     onlyIf {
         if (!enabled) logger.lifecycle("$taskName must run on a $platform host")
@@ -132,7 +109,20 @@ fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) 
     archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-$platform-x64.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     into("classes") { from(tasks.jar.map { zipTree(it.archiveFile) }) }
-    into("lib") { from(configurations.runtimeClasspath) }
+    into("lib") {
+        from(configurations.runtimeClasspath) {
+            eachFile {
+                if (platform == "linux" &&
+                    !file.name.startsWith("jna-") &&
+                    !file.name.startsWith("jna-platform-") &&
+                    !file.name.startsWith("jaudiotagger-")) {
+                    exclude()
+                } else {
+                    name = libraryNames[file.canonicalPath] ?: name
+                }
+            }
+        }
+    }
     into("licenses") { from("licenses") }
     into("source") { from(tasks.named("sourceArchive")); from(metadataSources) }
     from("LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md")
@@ -149,4 +139,3 @@ tasks.register("plugin") {
         check(isWindows || isLinux) { "Only Windows and Linux plugin archives are supported" }
     }
 }
-
