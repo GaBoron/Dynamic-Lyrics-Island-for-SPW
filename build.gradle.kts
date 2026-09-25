@@ -62,7 +62,7 @@ tasks.jar {
     )
 }
 tasks.register<Zip>("sourceArchive") {
-    archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-source.zip")
+    archiveFileName.set("spw-island-${project.version}-source.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     from("src") { into("src") }
     from("native") {
@@ -106,7 +106,7 @@ fun registerPluginArchive(taskName: String, platform: String, enabled: Boolean) 
         if (!enabled) logger.lifecycle("$taskName must run on a $platform host")
         enabled
     }
-    archiveFileName.set("dynamic-lyrics-island-for-spw-${project.version}-$platform-x64.zip")
+    archiveFileName.set("spw-island-${project.version}-$platform-x64.zip")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     into("classes") { from(tasks.jar.map { zipTree(it.archiveFile) }) }
     into("lib") {

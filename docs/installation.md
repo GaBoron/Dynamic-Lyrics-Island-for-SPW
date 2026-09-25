@@ -8,10 +8,12 @@
 
 | 平台 | 文件名 | 状态 |
 | --- | --- | --- |
-| Windows x64 | `dynamic-lyrics-island-for-spw-*-windows-x64.zip` | 主要支持平台 |
-| Linux x64 | `dynamic-lyrics-island-for-spw-*-linux-x64.zip` | 实验性支持 |
+| Windows x64 | `spw-island-*-windows-x64.zip` | 主要支持平台 |
+| Linux x64 | `spw-island-*-linux-x64.zip` | 实验性支持 |
 
 不要导入带 `-source` 后缀的源码包，也不要混用 Windows / Linux 包。
+
+v0.11.0 已发布的文件仍使用原有名称；下载时以对应 Release 页列出的实际文件为准。后续版本使用上表的新名称。
 
 ## Windows
 
