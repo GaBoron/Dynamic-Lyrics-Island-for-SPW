@@ -13,8 +13,6 @@
 
 不要导入带 `-source` 后缀的源码包，也不要混用 Windows / Linux 包。
 
-v0.11.0 已发布的文件仍使用原有名称；下载时以对应 Release 页列出的实际文件为准。后续版本使用上表的新名称。
-
 ## Windows
 
 需要 Windows 10 / 11 x64，以及兼容当前 Workshop API 的 SPW 版本。Java 由 SPW 提供，不需要另外安装。
