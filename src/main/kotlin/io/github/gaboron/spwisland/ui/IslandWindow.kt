@@ -147,7 +147,11 @@ class IslandWindow(private val timeline: PlaybackSource, private val store: Sett
     }
     fun reload() {
         if (closed) return
-        settings = store.read(); dragTopLeft = null; dragAnchor = null; nextScreenCheck = 0
+        settings = store.read()
+        // Settings notifications may arrive repeatedly while the mouse button is held.
+        // Keep the in-progress gesture until release commits its position.
+        if (!dragging) { dragTopLeft = null; dragAnchor = null }
+        nextScreenCheck = 0
         tick()
     }
     fun about() = menu.about()
